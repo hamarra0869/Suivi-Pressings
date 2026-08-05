@@ -6,9 +6,14 @@
   <title>DEKROU PRESSING — Gestion & Reçus WhatsApp</title>
   
   <meta name="theme-color" content="#0284c7">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  
+  <!-- Manifest PWA Intégré -->
+  <link rel="manifest" href='data:application/manifest+json,{"name":"DEKROU PRESSING","short_name":"DEKROU","start_url":".","display":"standalone","background_color":"#0284c7","theme_color":"#0284c7","icons":[{"src":"https://fav.farm/🧺","sizes":"512x512","type":"image/png"}]}'>
+
   <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
-  
   <script>
     tailwind.config = {
       darkMode: 'class',
@@ -25,7 +30,7 @@
       }
     }
   </script>
-  
+
   <style>
     ::-webkit-scrollbar { width: 4px; }
     ::-webkit-scrollbar-track { background: #0f172a; }
@@ -33,6 +38,18 @@
   </style>
 </head>
 <body class="bg-slate-950 text-slate-100 min-h-screen font-sans antialiased pb-20 select-none">
+
+  <!-- Bannière d'Installation PWA -->
+  <div id="pwaBanner" class="hidden bg-sky-600 text-white px-4 py-2.5 flex justify-between items-center text-xs font-semibold shadow-md sticky top-0 z-40">
+    <span class="flex items-center gap-2">📱 Installer l'application sur l'écran d'accueil</span>
+    <button onclick="installPWA()" class="bg-white text-sky-700 px-3 py-1 rounded-lg font-bold text-[11px] shadow hover:bg-slate-100 transition">Installer</button>
+  </div>
+
+  <!-- Notification Banner Toast -->
+  <div id="toastNotification" class="fixed bottom-5 left-1/2 -translate-x-1/2 z-50 bg-slate-900 border border-slate-700 text-white px-4 py-2.5 rounded-xl shadow-2xl text-xs font-semibold flex items-center gap-2 transition-all duration-300 opacity-0 pointer-events-none transform translate-y-4">
+    <span id="toastIcon">✨</span>
+    <span id="toastMessage">Message de notification</span>
+  </div>
 
   <!-- Header App -->
   <header class="bg-slate-900/90 border-b border-slate-800 sticky top-0 z-30 backdrop-blur">
@@ -44,14 +61,13 @@
         <div>
           <h1 class="font-black text-base text-white tracking-tight flex items-center gap-2">
             DEKROU <span class="text-sky-400">PRESSING</span>
-            <span id="proBadge" class="hidden bg-amber-500/10 text-amber-400 border border-amber-500/30 text-[9px] px-2 py-0.5 rounded-full font-bold">PRO</span>
           </h1>
           <p class="text-[11px] text-slate-400">Gestion des dépôts & Reçus WhatsApp</p>
         </div>
       </div>
 
-      <button onclick="openLicenceModal()" class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs px-3 py-1.5 rounded-xl font-bold text-sky-400 transition">
-        🔑 Licence
+      <button onclick="openFeedbackModal()" class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs px-3 py-1.5 rounded-xl font-bold text-sky-400 transition flex items-center gap-1">
+        💡 Vos retours
       </button>
     </div>
   </header>
@@ -66,7 +82,7 @@
           <span>✨ Nouveau Dépôt Client</span>
         </h2>
         <span id="ticketNumberDisplay" class="text-xs font-mono font-bold text-sky-400 bg-sky-500/10 border border-sky-500/20 px-2 py-0.5 rounded-lg">
-          TICKET-#----
+          TICK-#----
         </span>
       </div>
 
@@ -74,11 +90,11 @@
         <!-- Nom Client -->
         <div>
           <label class="block text-xs font-semibold text-slate-300 mb-1">Nom du Client</label>
-          <input type="text" id="clientName" placeholder="Ex: M. Yao Kouassi" 
+          <input type="text" id="clientName" placeholder="Ex: M. Kouassi" 
             class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-sky-500 transition">
         </div>
 
-        <!-- Téléphone WhatsApp avec Option 2 (+225 pré-rempli) -->
+        <!-- Téléphone WhatsApp avec préfixe +225 -->
         <div>
           <label class="block text-xs font-semibold text-slate-300 mb-1">Téléphone Client (WhatsApp)</label>
           <input type="tel" id="clientPhone" value="+225 " 
@@ -89,7 +105,7 @@
       <!-- Détails des Vêtements -->
       <div>
         <label class="block text-xs font-semibold text-slate-300 mb-1">Articles Dépôt (Type & Nombre)</label>
-        <textarea id="itemsDescription" rows="2" placeholder="Ex: 3 Chemises, 2 Pantalons costume, 1 Robe de soirée" 
+        <textarea id="itemsDescription" rows="2" placeholder="Ex: 3 Chemises, 2 Pantalons costume" 
           class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-sky-500 transition"></textarea>
       </div>
 
@@ -143,94 +159,92 @@
 
   </main>
 
-  <!-- MODALE LICENCE PRO -->
-  <div id="licenceModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+  <!-- MODALE RETOURS & AVIS CLIENT (REMPLACE LA DEMANDE DE PAIEMENT) -->
+  <div id="feedbackModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
     <div class="bg-slate-900 border border-slate-800 w-full max-w-sm rounded-2xl p-5 space-y-4 shadow-2xl relative">
-      <button onclick="closeLicenceModal()" class="absolute top-3 right-3 text-slate-400 hover:text-white font-bold text-sm">✕</button>
+      <button onclick="closeFeedbackModal()" class="absolute top-3 right-3 text-slate-400 hover:text-white font-bold text-sm">✕</button>
       
       <div class="text-center space-y-1">
-        <div class="w-10 h-10 rounded-xl bg-sky-500/20 border border-sky-500/30 text-sky-400 text-xl flex items-center justify-center mx-auto">🔑</div>
-        <h3 class="font-black text-base text-white">Activation Licence PRO</h3>
-        <p class="text-xs text-slate-400">Accès illimité à vie pour votre Pressing</p>
+        <div class="w-12 h-12 rounded-2xl bg-sky-500/10 border border-sky-500/20 text-sky-400 text-2xl flex items-center justify-center mx-auto mb-1">💬</div>
+        <h3 class="font-black text-base text-white">Vos impressions comptent !</h3>
+        <p class="text-xs text-slate-400">Aidez-nous à améliorer l'application pour votre pressing.</p>
       </div>
 
-      <div class="space-y-2 bg-slate-950 p-3 rounded-xl border border-slate-800">
-        <span class="block text-[10px] text-slate-400">Identifiant Appareil :</span>
-        <div id="modalDeviceId" class="font-mono text-xs font-bold text-sky-400 select-all">DKX-0000-00</div>
+      <div class="bg-slate-950 p-3.5 rounded-xl border border-slate-800 space-y-2 text-xs text-slate-300">
+        <p>Vous avez testé la création de plusieurs dépôts sur <strong>DEKROU PRESSING</strong>.</p>
+        <p class="text-slate-400 text-[11px]">Quelles fonctionnalités aimeriez-vous voir ajouter ? L'application est-elle pratique pour votre quotidien ?</p>
       </div>
 
-      <div class="space-y-2">
-        <label class="block text-xs font-semibold text-slate-300">Clé de Licence PRO</label>
-        <input type="text" id="licenceKeyInput" placeholder="PRO-XXXXX" 
-          class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2.5 text-xs font-mono font-bold text-emerald-400 uppercase text-center focus:outline-none focus:border-emerald-500 transition">
-      </div>
-
-      <button onclick="activateProLicence()" 
-        class="w-full bg-sky-600 hover:bg-sky-500 text-white font-bold py-2.5 rounded-xl text-xs transition shadow-lg shadow-sky-600/20">
-        Activer Maintenant
+      <button onclick="sendFeedbackWhatsApp()" 
+        class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded-xl text-xs transition shadow-lg shadow-emerald-600/20 flex items-center justify-center gap-2">
+        <span>💬 Donner mes impressions sur WhatsApp</span>
       </button>
 
-      <div class="text-[10px] text-slate-500 text-center pt-1">
-        Pour obtenir une clé, contactez l'administrateur avec votre ID Appareil.
-      </div>
+      <button onclick="closeFeedbackModal()" class="w-full bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs py-2 rounded-xl font-semibold transition">
+        Continuer l'utilisation
+      </button>
     </div>
   </div>
 
   <script>
-    const APP_SECRET = "DEKROU_PRESSING_SECRET_2026";
-    let isPro = false;
     let deposits = [];
     let currentTicketNum = "";
+    let deferredPrompt;
 
     document.addEventListener("DOMContentLoaded", () => {
-      checkLicence();
       loadDeposits();
       generateNewTicketNumber();
       setDefaultPickupDate();
       setupPhonePrefixGuard();
+      registerServiceWorker();
     });
 
-    // Option 2 : Maintien du préfixe +225 lors de la saisie
+    // Gestion de l'installation PWA
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      deferredPrompt = e;
+      document.getElementById('pwaBanner').classList.remove('hidden');
+    });
+
+    function installPWA() {
+      if (deferredPrompt) {
+        deferredPrompt.prompt();
+        deferredPrompt.userChoice.then(() => {
+          document.getElementById('pwaBanner').classList.add('hidden');
+          deferredPrompt = null;
+        });
+      }
+    }
+
+    function registerServiceWorker() {
+      if ('serviceWorker' in navigator) {
+        const swCode = `
+          self.addEventListener('install', (e) => self.skipWaiting());
+          self.addEventListener('activate', (e) => self.clients.claim());
+          self.addEventListener('fetch', (e) => e.respondWith(fetch(e.request).catch(() => caches.match(e.request))));
+        `;
+        const blob = new Blob([swCode], { type: 'application/javascript' });
+        navigator.serviceWorker.register(URL.createObjectURL(blob)).catch(() => {});
+      }
+    }
+
+    function showToast(message, icon = "✨") {
+      const toast = document.getElementById("toastNotification");
+      document.getElementById("toastMessage").textContent = message;
+      document.getElementById("toastIcon").textContent = icon;
+      toast.classList.remove("opacity-0", "pointer-events-none", "translate-y-4");
+      setTimeout(() => {
+        toast.classList.add("opacity-0", "pointer-events-none", "translate-y-4");
+      }, 3500);
+    }
+
     function setupPhonePrefixGuard() {
       const phoneInput = document.getElementById("clientPhone");
-      phoneInput.addEventListener("input", (e) => {
+      phoneInput.addEventListener("input", () => {
         if (!phoneInput.value.startsWith("+225 ")) {
           phoneInput.value = "+225 ";
         }
       });
-    }
-
-    function checkLicence() {
-      const deviceId = getOrCreateDeviceId();
-      document.getElementById("modalDeviceId").textContent = deviceId;
-      
-      const savedKey = localStorage.getItem("vdi_pressing_licence");
-      if (savedKey && validateKey(deviceId, savedKey)) {
-        isPro = true;
-        document.getElementById("proBadge").classList.remove("hidden");
-      }
-    }
-
-    function getOrCreateDeviceId() {
-      let id = localStorage.getItem("vdi_pressing_device_id");
-      if (!id) {
-        const rand = Math.floor(1000 + Math.random() * 9000);
-        const subRand = Math.floor(10 + Math.random() * 90);
-        id = `DKX-${rand}-${subRand}`;
-        localStorage.setItem("vdi_pressing_device_id", id);
-      }
-      return id;
-    }
-
-    function validateKey(deviceId, key) {
-      let hash = 0;
-      const str = deviceId.trim().toUpperCase() + APP_SECRET;
-      for (let i = 0; i < str.length; i++) {
-        hash = ((hash << 5) - hash) + str.charCodeAt(i);
-        hash |= 0;
-      }
-      const expectedKey = 'PRO-' + Math.abs(hash).toString(16).toUpperCase();
-      return key.trim().toUpperCase() === expectedKey;
     }
 
     function generateNewTicketNumber() {
@@ -241,7 +255,7 @@
 
     function setDefaultPickupDate() {
       const date = new Date();
-      date.setDate(date.getDate() + 2); // Retrait sous 48h par défaut
+      date.setDate(date.getDate() + 2);
       document.getElementById("pickupDate").value = date.toISOString().slice(0, 10);
     }
 
@@ -249,7 +263,6 @@
       const total = parseFloat(document.getElementById("totalAmount").value) || 0;
       const advance = parseFloat(document.getElementById("advanceAmount").value) || 0;
       const balance = Math.max(0, total - advance);
-      
       document.getElementById("balanceDisplay").textContent = balance.toLocaleString('fr-FR') + " FCFA";
     }
 
@@ -262,9 +275,10 @@
     }
 
     function saveAndSendReceipt() {
-      if (!isPro && deposits.length >= 3) {
-        openLicenceModal();
-        alert("🔒 Limite de la version gratuite atteinte (3 dépôts). Veuillez débloquer la licence PRO pour un usage illimité.");
+      // Déclencheur du feedback utilisateur au bout de 3 dépôts
+      if (deposits.length === 3 && !localStorage.getItem("vdi_pressing_feedback_prompted")) {
+        localStorage.setItem("vdi_pressing_feedback_prompted", "true");
+        openFeedbackModal();
         return;
       }
 
@@ -276,7 +290,7 @@
       const pickupDate = document.getElementById("pickupDate").value;
 
       if (!name || !items || total <= 0) {
-        alert("Veuillez remplir le nom du client, les articles et le montant total.");
+        showToast("Veuillez remplir le nom, les articles et le montant.", "⚠️");
         return;
       }
 
@@ -292,7 +306,6 @@
         advance,
         balance,
         pickupDate,
-        status: balance === 0 ? 'PAYE' : 'AVANCE',
         createdAt: new Date().toLocaleDateString('fr-FR')
       };
 
@@ -302,6 +315,7 @@
       renderDeposits();
       sendWhatsAppReceipt(newDeposit);
       resetForm();
+      showToast("Dépôt enregistré avec succès !", "✅");
     }
 
     function sendWhatsAppReceipt(dep) {
@@ -317,7 +331,8 @@
         `🔴 *Reste à Payer :* *${dep.balance.toLocaleString('fr-FR')} FCFA*\n\n` +
         `📅 *Date de Retrait Prévue :* *${formattedDate}*\n` +
         `-----------------------------------\n` +
-        `Merci pour votre confiance ! Merci de présenter ce message lors du retrait.`
+        `Merci pour votre confiance ! Merci de présenter ce message lors du retrait.\n` +
+        `_Conformément à la loi n° 2013-450, vos coordonnées sont uniquement conservées pour la gestion de votre reçu._`
       );
 
       window.open(`https://wa.me/${dep.phone}?text=${msg}`, '_blank');
@@ -381,29 +396,21 @@
     }
 
     function deleteDeposit(id) {
-      if (confirm("Voulez-vous supprimer ce dépôt ?")) {
-        deposits = deposits.filter(d => d.id !== id);
-        localStorage.setItem("vdi_pressing_deposits", JSON.stringify(deposits));
-        renderDeposits();
-      }
+      deposits = deposits.filter(d => d.id !== id);
+      localStorage.setItem("vdi_pressing_deposits", JSON.stringify(deposits));
+      renderDeposits();
+      showToast("Fiche supprimée.", "🗑️");
     }
 
-    function openLicenceModal() { document.getElementById("licenceModal").classList.remove("hidden"); }
-    function closeLicenceModal() { document.getElementById("licenceModal").classList.add("hidden"); }
+    function openFeedbackModal() { document.getElementById("feedbackModal").classList.remove("hidden"); }
+    function closeFeedbackModal() { document.getElementById("feedbackModal").classList.add("hidden"); }
 
-    function activateProLicence() {
-      const deviceId = getOrCreateDeviceId();
-      const inputKey = document.getElementById("licenceKeyInput").value.trim().toUpperCase();
-
-      if (validateKey(deviceId, inputKey)) {
-        localStorage.setItem("vdi_pressing_licence", inputKey);
-        isPro = true;
-        document.getElementById("proBadge").classList.remove("hidden");
-        closeLicenceModal();
-        alert("🎉 Licence PRO activée avec succès ! Merci de votre confiance.");
-      } else {
-        alert("❌ Clé de licence invalide pour cet appareil.");
-      }
+    function sendFeedbackWhatsApp() {
+      const msg = encodeURIComponent(
+        `👋 Bonjour,\n\nVoici mes impressions et suggestions pour l'amélioration de l'application *DEKROU PRESSING* :\n\n- `
+      );
+      window.open(`https://wa.me/?text=${msg}`, '_blank');
+      closeFeedbackModal();
     }
   </script>
 </body>
