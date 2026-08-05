@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html lang="fr" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DEKROU PRESSING — Gestion de Dépôt & Tickets Virtuels</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            500: '#0284c7',
+                            600: '#0369a1',
+                            700: '#075985',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #0f172a; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+    </style>
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col font-sans antialiased pb-12">
+
+    <!-- Header App -->
+    <header class="border-b border-slate-800 bg-slate-950/80 backdrop-blur sticky top-0 z-30 px-4 py-3">
+        <div class="max-w-md mx-auto flex items-center justify-between">
+            <div class="flex items-center gap-2">
+                <div class="w-8 h-8 rounded-lg bg-sky-600/20 border border-sky-500/30 flex items-center justify-center text-sky-400 font-bold">
+                    🧼
+                </div>
+                <div>
+                    <div class="flex items-center gap-1.5">
+                        <h1 id="pressingNameDisplay" class="text-base font-bold leading-tight text-white cursor-pointer hover:text-sky-400 transition" onclick="promptPressingName()" title="Cliquer pour modifier le nom">DEKROU PRESSING</h1>
+                        <button onclick="promptPressingName()" class="text-[10px] bg-slate-800 hover:bg-slate-700 text-slate-300 px-1.5 py-0.5 rounded border border-slate-700">✏️</button>
+                    </div>
+                    <p class="text-[10px] text-slate-400">Tickets Virtuels & Suivi Linge <span class="text-slate-600">•</span> <span class="text-sky-400 font-semibold">DEKROU®</span></p>
+                </div>
+            </div>
+            
+            <div class="flex items-center gap-1.5">
+                <button onclick="openGuideModal()" class="text-xs px-2 py-1 rounded-full font-medium bg-slate-800 text-slate-300 border border-slate-700 hover:bg-slate-700">💡 Guide</button>
+                <!-- License Badge -->
+                <div id="licenseBadge" class="text-xs px-2.5 py-1 rounded-full font-medium cursor-pointer bg-amber-500/10 text-amber-400 border border-amber-500/20" onclick="openProModal()">
+                    FREE (5/5)
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Container -->
+    <main class="max-w-md mx-auto w-full px-4 pt-4 flex-1 flex flex-col gap-5">
+
+        <!-- Form Card -->
+        <section class="bg-slate-800/80 border border-slate-700/60 rounded-xl p-4 shadow-xl">
+            <h2 class="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-3 flex items-center gap-2">
+                <span>🧺 Nouveau Dépôt de Linge</span>
+            </h2>
+
+            <form id="ticketForm" onsubmit="handleFormSubmit(event)" class="space-y-3">
+                <div class="grid grid-cols-2 gap-2">
+                    <div>
+                        <label class="block text-xs text-slate-300 mb-1">Nom Client</label>
+                        <input type="text" id="clientName" required placeholder="Ex: Yao Koffi" 
+                            class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-sky-500 transition">
+                    </div>
+                    <div>
+                        <label class="block text-xs text-slate-300 mb-1">Téléphone</label>
+                        <input type="tel" id="clientPhone" required placeholder="Ex: 0700000000" 
+                            class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-sky-500 transition">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs text-slate-300 mb-1">Détails du Linge (Articles & Quantités)</label>
+                    <textarea id="itemsDetail" required rows="2" placeholder="Ex: 2 Chemises, 1 Costume, 3 Pantalons (Nettoyage + Repassage)" 
+                        class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-sky-500 transition resize-none"></textarea>
+                </div>
+
+                <div class="grid grid-cols-2 gap-2">
+                    <div>
+                        <label class="block text-xs text-slate-300 mb-1">Montant Total (FCFA)</label>
+                        <input type="number" id="totalAmount" required min="0" value="0" oninput="calculateBalance()" 
+                            class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-sky-500 transition">
+                    </div>
+                    <div>
+                        <label class="block text-xs text-slate-300 mb-1">Avance Payée (FCFA)</label>
+                        <input type="number" id="depositAmount" required min="0" value="0" oninput="calculateBalance()" 
+                            class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-sky-500 transition">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs text-slate-300 mb-1">Date Estimée de Retrait</label>
+                    <input type="date" id="pickupDate" required 
+                        class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-sky-500 transition">
+                </div>
+
+                <!-- Financial Summary Banner -->
+                <div class="bg-slate-900/90 border border-slate-700/80 rounded-lg p-3 flex justify-between items-center my-2">
+                    <span class="text-xs text-slate-400 font-medium">Reste à Payer</span>
+                    <span id="balanceDisplay" class="text-base font-bold text-amber-400">0 FCFA</span>
+                </div>
+
+                <button type="submit" 
+                    class="w-full bg-sky-600 hover:bg-sky-500 active:scale-[0.98] text-white font-semibold py-2.5 rounded-lg text-sm transition flex items-center justify-center gap-2 shadow-lg shadow-sky-600/20">
+                    <span>Créer le Ticket Virtuel</span>
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+                </button>
+            </form>
+        </section>
+
+        <!-- Search & List Section -->
+        <section class="space-y-3">
+            <div class="flex items-center justify-between">
+                <h2 class="text-xs font-semibold uppercase tracking-wider text-slate-400">
+                    📋 Tickets Enregistrés (<span id="ticketCount">0</span>)
+                </h2>
+                <button onclick="clearAllTickets()" class="text-[11px] text-red-400 hover:underline">Tout vider</button>
+            </div>
+
+            <!-- Search Input -->
+            <input type="text" id="searchInput" oninput="renderTickets()" placeholder="🔍 Rechercher par nom ou N° de ticket..." 
+                class="w-full bg-slate-800/80 border border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-sky-500 transition">
+
+            <div id="ticketsList" class="space-y-3">
+                <!-- Les cartes générées s'afficheront ici -->
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Footer Marque Déposée -->
+    <footer class="text-center text-[11px] text-slate-500 pt-6 pb-2 border-t border-slate-800/60 mt-auto">
+        <p><strong>DEKROU PRESSING®</strong> — Marque Déposée | Tous droits réservés</p>
+        <p class="text-[10px] text-slate-600">Solution PWA de Gestion Professionnelle de Pressing</p>
+    </footer>
+
+    <!-- Modale d'Accueil / Guide d'utilisation -->
+    <div id="guideModal" class="fixed inset-0 bg-slate-950/85 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-slate-800 border border-slate-700 rounded-2xl p-5 max-w-sm w-full space-y-4 shadow-2xl relative">
+            <button onclick="closeGuideModal()" class="absolute top-3 right-3 text-slate-400 hover:text-white p-1 font-bold">✕</button>
+
+            <div class="text-center space-y-1">
+                <div class="w-12 h-12 rounded-2xl bg-sky-500/20 border border-sky-500/40 text-sky-400 text-2xl flex items-center justify-center mx-auto mb-1">
+                    🧼
+                </div>
+                <h3 class="text-lg font-bold text-white">Bienvenue sur DEKROU PRESSING®</h3>
+                <p class="text-xs text-sky-400 font-medium">Votre assistant digital de gestion de linge</p>
+            </div>
+
+            <div class="bg-slate-900/90 border border-slate-700/80 rounded-xl p-3.5 space-y-2 text-xs text-slate-300 leading-relaxed">
+                <p class="font-semibold text-slate-200">💡 À quoi sert cette application ?</p>
+                <ul class="space-y-1.5 list-disc pl-4 text-slate-400">
+                    <li><strong class="text-slate-200">Personnalisation :</strong> Indiquez le nom de votre pressing en haut de l'écran.</li>
+                    <li><strong class="text-slate-200">Reçus Digitaux :</strong> Enregistrez les dépôts et envoyez un ticket virtuel officiel à vos clients sur WhatsApp.</li>
+                    <li><strong class="text-slate-200">Notifications Flash :</strong> Prévenez le client en 1 clic dès que son linge est propre et repassé.</li>
+                    <li><strong class="text-slate-200">Gestion des Avances :</strong> Suivez les montants encaissés et les restes à payer.</li>
+                </ul>
+            </div>
+
+            <button onclick="closeGuideModal()" class="w-full bg-sky-600 hover:bg-sky-500 text-white font-bold py-2.5 rounded-xl text-xs transition shadow-lg shadow-sky-600/20">
+                J'ai compris, commencer !
+            </button>
+        </div>
+    </div>
+
+    <!-- Modale PRO -->
+    <div id="proModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-slate-800 border border-slate-700 rounded-2xl p-5 max-w-sm w-full space-y-4 shadow-2xl relative">
+            <button onclick="closeProModal()" class="absolute top-3 right-3 text-slate-400 hover:text-white p-1">✕</button>
+
+            <div class="text-center space-y-1">
+                <div class="inline-block p-3 rounded-full bg-amber-500/10 text-amber-400 mb-1 border border-amber-500/20">⚡</div>
+                <h3 class="text-lg font-bold text-white">Débloquer DEKROU PRESSING PRO</h3>
+                <p class="text-xs text-slate-400">Gérez un nombre illimité de dépôts de linge et envoyez vos notifications sans aucune restriction.</p>
+            </div>
+
+            <div class="bg-slate-900 border border-slate-700/80 rounded-xl p-3 space-y-2 text-xs">
+                <div class="flex justify-between items-center text-slate-300">
+                    <span>ID Appareil Unique :</span>
+                    <span id="deviceIdDisplay" class="font-mono font-bold text-sky-400">DKX-XXXX-XX</span>
+                </div>
+                <div class="border-t border-slate-800 pt-2 text-slate-400 space-y-1">
+                    <p>1. Effectuez le paiement via <strong>Wave</strong> au :</p>
+                    <p class="font-bold text-slate-200 text-sm text-center bg-slate-800 py-1 rounded border border-slate-700">05 06 50 97 22</p>
+                    <p>2. Envoyez la <strong>capture d'écran</strong> par WhatsApp avec votre ID Appareil pour recevoir votre clé.</p>
+                </div>
+            </div>
+
+            <!-- Activation Form -->
+            <div class="space-y-2">
+                <input type="text" id="licenseKeyInput" placeholder="Saisir la clé de licence reçue" 
+                    class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-center font-mono text-slate-100 uppercase focus:outline-none focus:border-emerald-500">
+                <button onclick="activateLicense()" 
+                    class="w-full bg-emerald-600 hover:bg-emerald-500 active:scale-[0.98] text-white font-semibold py-2 rounded-lg text-xs transition">
+                    Activer la licence
+                </button>
+            </div>
+
+            <a id="whatsappLink" href="#" target="_blank" 
+                class="block text-center text-xs text-emerald-400 hover:underline pt-1">
+                💬 Envoyer la preuve sur WhatsApp
+            </a>
+        </div>
+    </div>
+
+    <!-- Application Script Logic -->
+    <script>
+        const FREEMIUM_LIMIT = 5;
+        const APP_SECRET = "DEKROU_PRESSING_SECRET_2026";
+
+        // Initialisation du nom du pressing
+        function getPressingName() {
+            return localStorage.getItem('dekrou_pressing_name') || 'DEKROU PRESSING';
+        }
+
+        function setPressingName(name) {
+            const cleanName = name.trim() || 'DEKROU PRESSING';
+            localStorage.setItem('dekrou_pressing_name', cleanName);
+            document.getElementById('pressingNameDisplay').textContent = cleanName;
+        }
+
+        function promptPressingName() {
+            const current = getPressingName();
+            const input = prompt("Entrez le nom de votre Pressing / Établissement :", current);
+            if (input !== null) {
+                setPressingName(input);
+                renderTickets();
+            }
+        }
+
+        // Initialisation de l'appareil
+        function getDeviceId() {
+            let id = localStorage.getItem('dekrou_device_id');
+            if (!id) {
+                const randomPart = Math.floor(1000 + Math.random() * 9000);
+                const suffix = Math.floor(10 + Math.random() * 90);
+                id = `DKX-${randomPart}-${suffix}`;
+                localStorage.setItem('dekrou_device_id', id);
+            }
+            return id;
+        }
+
+        // Vérification du statut Pro
+        function isPro() {
+            const key = localStorage.getItem('dekrou_license_key');
+            if (!key) return false;
+            return key === generateValidKey(getDeviceId());
+        }
+
+        // Hash sécurisé pour valider la clé
+        function generateValidKey(deviceId) {
+            let hash = 0;
+            const str = deviceId + APP_SECRET;
+            for (let i = 0; i < str.length; i++) {
+                hash = ((hash << 5) - hash) + str.charCodeAt(i);
+                hash |= 0;
+            }
+            return 'PRO-' + Math.abs(hash).toString(16).toUpperCase();
+        }
+
+        // Gestion du compteur quotidien
+        function getTodayUsage() {
+            const today = new Date().toISOString().split('T')[0];
+            const usageData = JSON.parse(localStorage.getItem('dekrou_usage_data') || '{}');
+            if (usageData.date !== today) {
+                return { date: today, count: 0 };
+            }
+            return usageData;
+        }
+
+        function incrementTodayUsage() {
+            const usage = getTodayUsage();
+            usage.count += 1;
+            localStorage.setItem('dekrou_usage_data', JSON.stringify(usage));
+            updateUI();
+        }
+
+        // Calcul dynamique du reste à payer
+        function calculateBalance() {
+            const total = parseFloat(document.getElementById('totalAmount').value) || 0;
+            const deposit = parseFloat(document.getElementById('depositAmount').value) || 0;
+            const balance = Math.max(0, total - deposit);
+            const balanceEl = document.getElementById('balanceDisplay');
+            balanceEl.textContent = balance.toLocaleString('fr-FR') + ' FCFA';
+            if (balance === 0 && total > 0) {
+                balanceEl.className = "text-base font-bold text-emerald-400";
+            } else {
+                balanceEl.className = "text-base font-bold text-amber-400";
+            }
+        }
+
+        // Formatage de la date en français
+        function formatDateFR(dateStr) {
+            if (!dateStr) return '';
+            const parts = dateStr.split('-');
+            if (parts.length === 3) return `${parts[2]}/${parts[1]}/${parts[0]}`;
+            return dateStr;
+        }
+
+        // Soumission du formulaire
+        function handleFormSubmit(e) {
+            e.preventDefault();
+
+            if (!isPro()) {
+                const usage = getTodayUsage();
+                if (usage.count >= FREEMIUM_LIMIT) {
+                    openProModal();
+                    return;
+                }
+            }
+
+            const name = document.getElementById('clientName').value.trim();
+            const phone = document.getElementById('clientPhone').value.trim();
+            const items = document.getElementById('itemsDetail').value.trim();
+            const total = parseFloat(document.getElementById('totalAmount').value) || 0;
+            const deposit = parseFloat(document.getElementById('depositAmount').value) || 0;
+            const balance = Math.max(0, total - deposit);
+            const pickupDate = document.getElementById('pickupDate').value;
+
+            const ticketNumber = `TICK-${Math.floor(1000 + Math.random() * 9000)}`;
+
+            const newTicket = {
+                id: Date.now(),
+                ticketNumber,
+                name,
+                phone,
+                items,
+                total,
+                deposit,
+                balance,
+                pickupDate,
+                status: 'En attente'
+            };
+
+            saveTicket(newTicket);
+            incrementTodayUsage();
+
+            // Reset du formulaire
+            document.getElementById('ticketForm').reset();
+            setDefaultPickupDate();
+            calculateBalance();
+            renderTickets();
+        }
+
+        // Sauvegarde & Restauration des tickets
+        function getTickets() {
+            return JSON.parse(localStorage.getItem('dekrou_tickets_data') || '[]');
+        }
+
+        function saveTicket(ticket) {
+            const tickets = getTickets();
+            tickets.unshift(ticket);
+            localStorage.setItem('dekrou_tickets_data', JSON.stringify(tickets));
+        }
+
+        function updateTicketStatus(id, newStatus) {
+            const tickets = getTickets();
+            const index = tickets.findIndex(t => t.id === id);
+            if (index !== -1) {
+                tickets[index].status = newStatus;
+                localStorage.setItem('dekrou_tickets_data', JSON.stringify(tickets));
+                renderTickets();
+            }
+        }
+
+        function deleteTicket(id) {
+            let tickets = getTickets();
+            tickets = tickets.filter(t => t.id !== id);
+            localStorage.setItem('dekrou_tickets_data', JSON.stringify(tickets));
+            renderTickets();
+        }
+
+        function clearAllTickets() {
+            if (confirm("Voulez-vous supprimer tous les tickets de dépôt ?")) {
+                localStorage.removeItem('dekrou_tickets_data');
+                renderTickets();
+            }
+        }
+
+        // Affichage des tickets
+        function renderTickets() {
+            const tickets = getTickets();
+            const searchQuery = (document.getElementById('searchInput').value || '').toLowerCase().trim();
+            const container = document.getElementById('ticketsList');
+            const pressingName = getPressingName();
+
+            const filteredTickets = tickets.filter(t => 
+                t.name.toLowerCase().includes(searchQuery) || 
+                t.ticketNumber.toLowerCase().includes(searchQuery) ||
+                t.phone.includes(searchQuery)
+            );
+
+            document.getElementById('ticketCount').textContent = filteredTickets.length;
+
+            if (filteredTickets.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-8 text-slate-500 text-xs bg-slate-800/30 rounded-xl border border-slate-800">
+                        ${searchQuery ? 'Aucun ticket ne correspond à la recherche.' : 'Aucun dépôt enregistré pour le moment.'}
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = filteredTickets.map(ticket => {
+                // Message 1 : Reçu de Dépôt Initial avec Nom du Pressing Personnalisé
+                const depositMsg = encodeURIComponent(
+                    `🧺 *${pressingName.toUpperCase()} — REÇU DE DÉPÔT*\n` +
+                    `-----------------------------------\n` +
+                    `🎫 *Ticket N° :* ${ticket.ticketNumber}\n` +
+                    `👤 *Client :* ${ticket.name}\n` +
+                    `📞 *Contact :* ${ticket.phone}\n` +
+                    `-----------------------------------\n` +
+                    `👕 *Articles :*\n${ticket.items}\n` +
+                    `-----------------------------------\n` +
+                    `💰 *Total :* ${ticket.total.toLocaleString('fr-FR')} FCFA\n` +
+                    `💵 *Avance :* ${ticket.deposit.toLocaleString('fr-FR')} FCFA\n` +
+                    `📌 *Reste à payer :* ${ticket.balance.toLocaleString('fr-FR')} FCFA\n` +
+                    `📅 *Date de retrait prévue :* ${formatDateFR(ticket.pickupDate)}\n` +
+                    `-----------------------------------\n` +
+                    `Merci de votre confiance ! ✨\n` +
+                    `_Propulsé par DEKROU PRESSING®_`
+                );
+
+                // Message 2 : Notification Linge Prêt
+                const readyMsg = encodeURIComponent(
+                    `✨ *${pressingName.toUpperCase()} — LINGE PRÊT !*\n` +
+                    `-----------------------------------\n` +
+                    `Bonjour *${ticket.name}*,\n` +
+                    `Votre linge (Ticket *${ticket.ticketNumber}*) est nettoyé, repassé et prêt à être retiré ! 👔✨\n\n` +
+                    `📌 *Reste à régler à la caisse :* ${ticket.balance.toLocaleString('fr-FR')} FCFA\n\n` +
+                    `À très vite dans votre pressing ! 🧼`
+                );
+
+                const statusColors = {
+                    'En attente': 'bg-amber-500/10 text-amber-400 border-amber-500/20',
+                    'En cours de lavage': 'bg-sky-500/10 text-sky-400 border-sky-500/20',
+                    'Prêt à retirer': 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
+                    'Retiré': 'bg-slate-500/10 text-slate-400 border-slate-500/20'
+                };
+
+                const cleanPhone = ticket.phone.replace(/[^0-9]/g, '');
+
+                return `
+                    <div class="bg-slate-800/90 border border-slate-700/80 rounded-xl p-3 space-y-2 text-xs shadow-md">
+                        <div class="flex justify-between items-start">
+                            <div>
+                                <div class="flex items-center gap-2">
+                                    <span class="font-mono font-bold text-sky-400 bg-sky-950 px-1.5 py-0.5 rounded border border-sky-800/60">${ticket.ticketNumber}</span>
+                                    <h3 class="font-bold text-sm text-slate-100">${ticket.name}</h3>
+                                </div>
+                                <p class="text-slate-400 text-[11px] mt-0.5">📞 ${ticket.phone}</p>
+                            </div>
+                            <select onchange="updateTicketStatus(${ticket.id}, this.value)" 
+                                class="text-[10px] font-medium px-2 py-1 rounded-full border ${statusColors[ticket.status]} bg-slate-900 focus:outline-none">
+                                <option value="En attente" ${ticket.status === 'En attente' ? 'selected' : ''}>En attente</option>
+                                <option value="En cours de lavage" ${ticket.status === 'En cours de lavage' ? 'selected' : ''}>En cours</option>
+                                <option value="Prêt à retirer" ${ticket.status === 'Prêt à retirer' ? 'selected' : ''}>Prêt à retirer</option>
+                                <option value="Retiré" ${ticket.status === 'Retiré' ? 'selected' : ''}>Retiré</option>
+                            </select>
+                        </div>
+
+                        <div class="text-slate-300 bg-slate-900/60 p-2 rounded-lg border border-slate-800/80 space-y-1.5">
+                            <p class="whitespace-pre-line text-slate-200">👕 ${ticket.items}</p>
+                            <div class="flex justify-between items-center text-slate-400 pt-1.5 border-t border-slate-800 text-[11px]">
+                                <span>Total: ${ticket.total.toLocaleString('fr-FR')} FCFA</span>
+                                <span>Avance: ${ticket.deposit.toLocaleString('fr-FR')} FCFA</span>
+                            </div>
+                            <div class="flex justify-between items-center pt-0.5">
+                                <span class="text-[10px] text-slate-400">📅 Retrait : ${formatDateFR(ticket.pickupDate)}</span>
+                                <span class="font-bold ${ticket.balance === 0 ? 'text-emerald-400' : 'text-amber-400'} text-xs">Reste : ${ticket.balance.toLocaleString('fr-FR')} FCFA</span>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-2 pt-1">
+                            <a href="https://wa.me/${cleanPhone}?text=${depositMsg}" target="_blank" 
+                                class="bg-sky-600/20 hover:bg-sky-600/30 text-sky-300 border border-sky-500/30 text-center py-1.5 rounded-lg font-medium transition flex items-center justify-center gap-1 text-[11px]">
+                                📑 Reçu WhatsApp
+                            </a>
+                            <a href="https://wa.me/${cleanPhone}?text=${readyMsg}" target="_blank" 
+                                class="bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 border border-emerald-500/30 text-center py-1.5 rounded-lg font-medium transition flex items-center justify-center gap-1 text-[11px]">
+                                ✨ Notifier "Prêt"
+                            </a>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Application Default Date
+        function setDefaultPickupDate() {
+            const today = new Date();
+            today.setDate(today.getDate() + 2);
+            document.getElementById('pickupDate').value = today.toISOString().split('T')[0];
+        }
+
+        // Modale d'accueil / Guide
+        function openGuideModal() {
+            document.getElementById('guideModal').classList.remove('hidden');
+        }
+
+        function closeGuideModal() {
+            localStorage.setItem('dekrou_guide_seen', 'true');
+            document.getElementById('guideModal').classList.add('hidden');
+        }
+
+        function checkFirstVisitGuide() {
+            const seen = localStorage.getItem('dekrou_guide_seen');
+            if (!seen) {
+                openGuideModal();
+            }
+        }
+
+        // Interface & Modal Pro Management
+        function updateUI() {
+            const badge = document.getElementById('licenseBadge');
+            if (isPro()) {
+                badge.className = "text-xs px-2.5 py-1 rounded-full font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20";
+                badge.textContent = "PRO ILLIMITÉ";
+                badge.onclick = null;
+            } else {
+                const usage = getTodayUsage();
+                badge.className = "text-xs px-2.5 py-1 rounded-full font-medium bg-amber-500/10 text-amber-400 border border-amber-500/20 cursor-pointer";
+                badge.textContent = `FREE (${usage.count}/${FREEMIUM_LIMIT})`;
+            }
+        }
+
+        function openProModal() {
+            const deviceId = getDeviceId();
+            document.getElementById('deviceIdDisplay').textContent = deviceId;
+
+            const waMsg = encodeURIComponent(
+                `Bonjour, je souhaite activer la licence PRO de DEKROU PRESSING.\n` +
+                `ID Appareil : ${deviceId}\n` +
+                `J'ai effectué le paiement par Wave.`
+            );
+            document.getElementById('whatsappLink').href = `https://wa.me/2250506509722?text=${waMsg}`;
+
+            document.getElementById('proModal').classList.remove('hidden');
+        }
+
+        function closeProModal() {
+            document.getElementById('proModal').classList.add('hidden');
+        }
+
+        function activateLicense() {
+            const key = document.getElementById('licenseKeyInput').value.trim().toUpperCase();
+            const expectedKey = generateValidKey(getDeviceId());
+
+            if (key === expectedKey) {
+                localStorage.setItem('dekrou_license_key', key);
+                alert("Félicitations ! Votre licence PRO DEKROU PRESSING® est activée.");
+                closeProModal();
+                updateUI();
+            } else {
+                alert("Clé de licence invalide. Veuillez vérifier votre saisie.");
+            }
+        }
+
+        // Initialisation globale
+        window.onload = function() {
+            getDeviceId();
+            setPressingName(getPressingName());
+            setDefaultPickupDate();
+            updateUI();
+            renderTickets();
+            checkFirstVisitGuide();
+        };
+    </script>
+</body>
+</html>
