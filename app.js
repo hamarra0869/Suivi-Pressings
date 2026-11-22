@@ -59,7 +59,6 @@
     backupText: $("backupText"),
     banner: $("pwaBanner"),
     toast: $("toastNotification"),
-    toastIcon: $("toastIcon"),
     toastMsg: $("toastMessage"),
   };
 
@@ -104,9 +103,10 @@
     return local ? "+225 " + local.replace(/(\d{2})(?=\d)/g, "$1 ") : "";
   };
 
-  function showToast(message, icon = "✨") {
+  function showToast(message, kind = "info") {
     el.toastMsg.textContent = message;
-    el.toastIcon.textContent = icon;
+    el.toast.classList.toggle("bg-red-700", kind === "error");
+    el.toast.classList.toggle("bg-stone-900", kind !== "error");
     el.toast.classList.remove("opacity-0", "pointer-events-none", "translate-y-4");
     clearTimeout(toastTimer);
     toastTimer = setTimeout(() => {
@@ -122,7 +122,7 @@
       refreshBackupBanner();
       return true;
     } catch (e) {
-      showToast("Stockage plein ou indisponible : données non sauvegardées.", "⚠️");
+      showToast("Stockage plein ou indisponible : données non sauvegardées.", "error");
       return false;
     }
   }
@@ -144,7 +144,7 @@
     } catch (e) {
       settings = {};
     }
-    el.headerName.textContent = settings.name || "Gestion des dépôts & Reçus WhatsApp";
+    el.headerName.textContent = settings.name || "Gestion des dépôts";
   }
 
   function openSettings() {
@@ -158,7 +158,7 @@
     e.preventDefault();
     const name = el.setName.value.trim();
     if (!name) {
-      showToast("Indiquez le nom de votre pressing.", "⚠️");
+      showToast("Indiquez le nom de votre pressing.", "error");
       el.setName.focus();
       return;
     }
@@ -166,7 +166,7 @@
     localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
     loadSettings();
     closeModals();
-    showToast("Réglages enregistrés.", "✅");
+    showToast("Réglages enregistrés.");
   }
 
   // Licence PRO
@@ -212,10 +212,10 @@
     el.trialText.textContent = left > 0
       ? `Version d'essai : ${left} dépôt${left > 1 ? "s" : ""} gratuit${left > 1 ? "s" : ""} restant${left > 1 ? "s" : ""}`
       : "Essai terminé";
-    el.settingsLicenceStatus.textContent = isPro ? "PRO activée ✅" : `Essai (${left} restants)`;
+    el.settingsLicenceStatus.textContent = isPro ? "PRO active" : `Essai, ${left} dépôt${left > 1 ? "s" : ""} restant${left > 1 ? "s" : ""}`;
     el.licenceStatus.textContent = isPro
-      ? "✅ Licence PRO activée sur cet appareil. Dépôts illimités."
-      : `Version d'essai : ${left} dépôt(s) gratuit(s) restant(s). Envoyez l'ID ci-dessous pour recevoir votre clé PRO.`;
+      ? "Licence PRO active sur cet appareil : dépôts illimités."
+      : `Version d'essai : ${left} dépôt(s) gratuit(s) restant(s). Envoyez l'identifiant ci-dessous pour recevoir votre clé.`;
     el.licenceForm.classList.toggle("hidden", isPro);
   }
 
@@ -228,11 +228,11 @@
 
   function requestLicence() {
     const msg =
-      `🔑 *Demande de licence PRO — ${APP_NAME}*\n\n` +
-      `🏪 *Pressing :* ${settings.name || "(non renseigné)"}\n` +
-      (settings.phone ? `📞 *Téléphone :* ${settings.phone}\n` : "") +
-      (settings.address ? `📍 *Adresse :* ${settings.address}\n` : "") +
-      `📲 *ID Appareil :* ${getDeviceId()}`;
+      `Bonjour, je souhaite activer la licence PRO de Dekrou Pressing.\n\n` +
+      `Pressing : ${settings.name || "(non renseigné)"}\n` +
+      (settings.phone ? `Téléphone : ${settings.phone}\n` : "") +
+      (settings.address ? `Adresse : ${settings.address}\n` : "") +
+      `Identifiant appareil : ${getDeviceId()}`;
     window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, "_blank", "noopener");
   }
 
@@ -242,10 +242,10 @@
       localStorage.setItem(LICENCE_KEY, key);
       isPro = true;
       refreshLicenceUI();
-      showToast("Licence PRO activée. Merci !", "🎉");
+      showToast("Licence PRO activée.");
       setTimeout(closeModals, 1200);
     } else {
-      showToast("Clé invalide pour cet appareil.", "❌");
+      showToast("Clé invalide pour cet appareil.", "error");
     }
   }
 
@@ -294,7 +294,7 @@
             text: "Sauvegarde de mes fiches (à garder, ne pas supprimer).",
           });
           markBackedUp();
-          showToast("Sauvegarde envoyée. Gardez-la précieusement.", "💾");
+          showToast("Sauvegarde envoyée.");
           return;
         } catch (e) {
           if (e && e.name === "AbortError") return; // partage annulé
@@ -310,7 +310,7 @@
     a.remove();
     setTimeout(() => URL.revokeObjectURL(a.href), 1000);
     markBackedUp();
-    showToast("Sauvegarde téléchargée.", "💾");
+    showToast("Sauvegarde téléchargée.");
   }
 
   function refreshBackupBanner() {
@@ -341,7 +341,7 @@
       let data;
       try { data = JSON.parse(reader.result); } catch (e) { data = null; }
       if (!data || data.app !== "dekrou-pressing" || !Array.isArray(data.deposits)) {
-        showToast("Fichier de sauvegarde invalide.", "❌");
+        showToast("Fichier de sauvegarde invalide.", "error");
         return;
       }
       const clean = data.deposits.filter(isValidDeposit).map((d) => ({
@@ -371,7 +371,7 @@
       refreshTicket();
       renderDeposits();
       closeModals();
-      showToast(`${clean.length} fiche(s) restaurée(s).`, "✅");
+      showToast(`${clean.length} fiche(s) restaurée(s).`);
     };
     reader.readAsText(file);
     el.importFile.value = "";
@@ -410,13 +410,13 @@
     const total = amount(el.total);
     const advance = amount(el.advance);
     el.balance.textContent = fmtMoney(Math.max(0, total - advance));
-    el.advance.classList.toggle("border-rose-500", advance > total && total > 0);
+    el.advance.classList.toggle("border-red-600", advance > total && total > 0);
   }
 
   function resetForm() {
     el.form.reset();
     el.balance.textContent = fmtMoney(0);
-    el.advance.classList.remove("border-rose-500");
+    el.advance.classList.remove("border-red-600");
     setDefaultPickupDate();
     refreshTicket();
     el.name.focus();
@@ -426,7 +426,7 @@
     e.preventDefault();
 
     if (!settings.name) {
-      showToast("Indiquez d'abord le nom de votre pressing.", "⚙️");
+      showToast("Indiquez d'abord le nom de votre pressing.", "error");
       openSettings();
       return;
     }
@@ -443,17 +443,17 @@
     const phone = normalizePhone(el.phone.value);
 
     if (!name || !items || total <= 0) {
-      showToast("Veuillez remplir le nom, les articles et le montant.", "⚠️");
+      showToast("Veuillez remplir le nom, les articles et le montant.", "error");
       (!name ? el.name : !items ? el.items : el.total).focus();
       return;
     }
     if (!phone) {
-      showToast("Numéro WhatsApp invalide (10 chiffres attendus).", "⚠️");
+      showToast("Numéro WhatsApp invalide (10 chiffres attendus).", "error");
       el.phone.focus();
       return;
     }
     if (advance > total) {
-      showToast("L'avance ne peut pas dépasser le montant total.", "⚠️");
+      showToast("L'avance ne peut pas dépasser le montant total.", "error");
       el.advance.focus();
       return;
     }
@@ -483,7 +483,7 @@
     sendWhatsAppReceipt(deposit);
     renderDeposits();
     resetForm();
-    showToast("Dépôt enregistré avec succès !", "✅");
+    showToast("Dépôt enregistré.");
 
     if (deposits.length >= FEEDBACK_AFTER && !localStorage.getItem(FEEDBACK_KEY)) {
       localStorage.setItem(FEEDBACK_KEY, "true");
@@ -493,22 +493,26 @@
 
   // WhatsApp
   function sendWhatsAppReceipt(dep) {
-    const msg =
-      `🧺 *REÇU DE DÉPÔT — ${(settings.name || APP_NAME).toUpperCase()}*\n` +
-      `-----------------------------------\n` +
-      `🎫 *Ticket N° :* ${dep.ticket}\n` +
-      `👤 *Client :* ${dep.name}\n` +
-      `📦 *Articles :* ${dep.items}\n\n` +
-      `💰 *Montant Total :* ${fmtMoney(dep.total)}\n` +
-      `💵 *Avance Payée :* ${fmtMoney(dep.advance)}\n` +
-      `🔴 *Reste à Payer :* *${fmtMoney(dep.balance)}*\n\n` +
-      `📅 *Date de Retrait Prévue :* *${fmtDate(dep.pickupDate)}*\n` +
-      `-----------------------------------\n` +
-      (settings.address ? `📍 ${settings.address}\n` : "") +
-      (settings.phone ? `📞 ${settings.phone}\n` : "") +
-      `Merci pour votre confiance ! Merci de présenter ce message lors du retrait.\n` +
-      `_Conformément à la loi n° 2013-450, vos coordonnées sont uniquement conservées pour la gestion de votre reçu._\n` +
-      `_Reçu généré avec ${APP_NAME}_`;
+    const shop = settings.name || APP_NAME;
+    const lines = [
+      `*${shop}*`,
+      `Reçu de dépôt ${dep.ticket}`,
+      ``,
+      `Client : ${dep.name}`,
+      `Articles : ${dep.items}`,
+      ``,
+      `Total : ${fmtMoney(dep.total)}`,
+      `Avance : ${fmtMoney(dep.advance)}`,
+      `*Reste à payer : ${fmtMoney(dep.balance)}*`,
+      ``,
+      `Retrait prévu le ${fmtDate(dep.pickupDate)}`,
+      [settings.address, settings.phone].filter(Boolean).join(" · "),
+      ``,
+      `Merci de présenter ce reçu au retrait.`,
+      `_Vos coordonnées servent uniquement au suivi de ce dépôt (loi n° 2013-450)._`,
+      `_Reçu Dekrou Pressing_`,
+    ];
+    const msg = lines.filter((l, i, a) => l !== "" || a[i - 1] !== "").join("\n");
 
     const phone = digitsOnly(dep.phone);
     window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`, "_blank", "noopener");
@@ -519,20 +523,21 @@
     if (!dep) return;
     const first = !dep.readyAt;
     const shop = settings.name || APP_NAME;
-    const msg =
-      `👋 Bonjour ${dep.name},\n\n` +
-      (first
-        ? `✅ *Votre linge est prêt* chez *${shop}* !\n\n`
-        : `🔔 *Rappel* : votre linge vous attend chez *${shop}* depuis le ${fmtDate(dep.readyAt)}.\n\n`) +
-      `🎫 *Ticket N° :* ${dep.ticket}\n` +
-      `📦 *Articles :* ${dep.items}\n` +
-      (dep.balance > 0
-        ? `🔴 *Reste à payer au retrait :* *${fmtMoney(dep.balance)}*\n`
-        : `🟢 *Déjà réglé* — rien à payer.\n`) +
-      (settings.address ? `\n📍 ${settings.address}\n` : "") +
-      (settings.phone ? `📞 ${settings.phone}\n` : "") +
-      `\nMerci de présenter votre ticket lors du retrait. À bientôt !\n` +
-      `_Message envoyé avec ${APP_NAME}_`;
+    const lines = [
+      `Bonjour ${dep.name},`,
+      ``,
+      first
+        ? `Votre linge est prêt chez *${shop}*.`
+        : `Votre linge vous attend chez *${shop}* depuis le ${fmtDate(dep.readyAt)}.`,
+      ``,
+      `Ticket : ${dep.ticket}`,
+      `Articles : ${dep.items}`,
+      dep.balance > 0 ? `*Reste à payer au retrait : ${fmtMoney(dep.balance)}*` : `Déjà réglé, rien à payer.`,
+      ``,
+      [settings.address, settings.phone].filter(Boolean).join(" · "),
+      `Merci de présenter votre ticket au retrait.`,
+    ];
+    const msg = lines.filter((l, i, a) => l !== "" || a[i - 1] !== "").join("\n");
 
     window.open(`https://wa.me/${digitsOnly(dep.phone)}?text=${encodeURIComponent(msg)}`, "_blank", "noopener");
     if (first) {
@@ -540,7 +545,7 @@
       persist();
       renderDeposits();
     }
-    showToast(first ? "Client prévenu : linge prêt." : "Rappel envoyé.", "🔔");
+    showToast(first ? "Client prévenu : linge prêt." : "Rappel envoyé.");
   }
 
   // Liste
@@ -548,34 +553,34 @@
     const paid = dep.balance === 0;
     const late = dep.pickupDate && dep.pickupDate < today;
     const id = escapeHtml(dep.id);
+    const tags = [
+      dep.readyAt ? `<span class="rounded bg-blue-50 px-1.5 py-0.5 text-[12px] font-medium text-blue-800">Prêt le ${fmtDate(dep.readyAt).slice(0, 5)}</span>` : "",
+      late ? `<span class="rounded bg-red-50 px-1.5 py-0.5 text-[12px] font-medium text-red-700">En retard</span>` : "",
+    ].join("");
     return `
-      <article class="bg-slate-900 border ${late ? "border-rose-500/40" : "border-slate-800"} rounded-2xl p-4 space-y-3 shadow-lg">
-        <div class="flex justify-between items-start gap-2 border-b border-slate-800 pb-2">
+      <article class="card p-4">
+        <div class="flex items-start justify-between gap-3">
           <div class="min-w-0">
-            <span class="font-mono font-bold text-sky-400 text-xs">${escapeHtml(dep.ticket)}</span>
-            ${dep.readyAt ? `<span class="ml-1 text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-sky-500/10 text-sky-300 border border-sky-500/30">PRÊT le ${fmtDate(dep.readyAt).slice(0, 5)}</span>` : ""}
-            <h4 class="font-bold text-sm text-white break-words">${escapeHtml(dep.name)}</h4>
-            ${dep.phone ? `<span class="font-mono text-[11px] text-slate-500">${escapeHtml(prettyPhone(dep.phone))}</span>` : ""}
+            <div class="flex flex-wrap items-center gap-1.5">
+              <span class="font-mono text-[13px] text-stone-500">${escapeHtml(dep.ticket)}</span>${tags}
+            </div>
+            <h4 class="break-words text-[15px] font-semibold">${escapeHtml(dep.name)}</h4>
+            ${dep.phone ? `<span class="text-[13px] tabular-nums text-stone-500">${escapeHtml(prettyPhone(dep.phone))}</span>` : ""}
           </div>
-          <span class="shrink-0 text-[10px] font-bold px-2 py-0.5 rounded-full border ${paid
-            ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/30"
-            : "bg-amber-500/10 text-amber-400 border-amber-500/30"}">
-            ${paid ? "SOLDÉ" : "RESTE : " + fmtMoney(dep.balance)}
-          </span>
+          <div class="shrink-0 text-right">
+            <span class="block text-[12px] text-stone-500">${paid ? "Payé" : "Reste"}</span>
+            <span class="text-[15px] font-semibold tabular-nums ${paid ? "text-green-700" : "text-stone-900"}">${paid ? fmtMoney(dep.total) : fmtMoney(dep.balance)}</span>
+          </div>
         </div>
 
-        <p class="text-xs text-slate-300 bg-slate-950 p-2 rounded-xl border border-slate-800/80 whitespace-pre-line break-words">${escapeHtml(dep.items)}</p>
+        <p class="mt-2 whitespace-pre-line break-words text-sm text-stone-700">${escapeHtml(dep.items)}</p>
+        <p class="mt-1 text-[13px] ${late ? "text-red-700" : "text-stone-500"}">Retrait prévu le ${fmtDate(dep.pickupDate)}</p>
 
-        <div class="flex flex-wrap justify-between items-center gap-2 text-[11px] text-slate-400 pt-1">
-          <span>Retrait : <strong class="${late ? "text-rose-400" : "text-slate-200"}">${fmtDate(dep.pickupDate)}${late ? " ⏰" : ""}</strong></span>
-          <div class="flex flex-wrap justify-end gap-2">
-            <button type="button" data-action="ready" data-id="${id}" class="${dep.readyAt
-              ? "bg-slate-800 hover:bg-slate-700 text-sky-300 border-slate-700"
-              : "bg-sky-600 hover:bg-sky-500 text-white border-sky-500"} border px-2.5 py-1 rounded-lg text-[10px] font-bold">${dep.readyAt ? "🔔 Relancer" : "🔔 Prêt"}</button>
-            ${paid ? "" : `<button type="button" data-action="settle" data-id="${id}" class="bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 px-2.5 py-1 rounded-lg text-[10px] font-bold">💵 Solder</button>`}
-            <button type="button" data-action="resend" data-id="${id}" class="bg-slate-800 hover:bg-slate-700 text-sky-400 border border-slate-700 px-2.5 py-1 rounded-lg text-[10px] font-bold">💬 Reçu</button>
-            <button type="button" data-action="delete" data-id="${id}" aria-label="Supprimer la fiche" class="bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30 px-2.5 py-1 rounded-lg text-[10px] font-bold">🗑️</button>
-          </div>
+        <div class="mt-3 flex flex-wrap gap-2 border-t border-stone-100 pt-3">
+          <button type="button" data-action="ready" data-id="${id}" class="${dep.readyAt ? "btn-secondary" : "btn-primary"} btn-sm">${dep.readyAt ? "Relancer" : "Linge prêt"}</button>
+          ${paid ? "" : `<button type="button" data-action="settle" data-id="${id}" class="btn-secondary btn-sm">Encaisser</button>`}
+          <button type="button" data-action="resend" data-id="${id}" class="btn-secondary btn-sm">Reçu</button>
+          <button type="button" data-action="delete" data-id="${id}" class="btn-danger btn-sm ml-auto">Supprimer</button>
         </div>
       </article>`;
   }
@@ -599,7 +604,7 @@
 
     el.list.innerHTML = visible.length
       ? visible.map((d) => depositCard(d, today)).join("")
-      : `<div class="text-center py-8 text-slate-500 text-xs">${n ? "Aucun résultat." : "Aucun dépôt enregistré."}</div>`;
+      : `<div class="py-8 text-center text-sm text-stone-500">${n ? "Aucun résultat." : "Aucun dépôt enregistré."}</div>`;
   }
 
   function findDeposit(id) {
@@ -608,12 +613,12 @@
 
   function settleDeposit(id) {
     const dep = findDeposit(id);
-    if (!dep || !confirm(`Confirmer l'encaissement de ${fmtMoney(dep.balance)} pour ${dep.name} ?`)) return;
+    if (!dep || !confirm(`Encaisser ${fmtMoney(dep.balance)} de ${dep.name} ?`)) return;
     dep.advance = dep.total;
     dep.balance = 0;
     persist();
     renderDeposits();
-    showToast("Paiement soldé.", "💵");
+    showToast("Paiement enregistré.");
   }
 
   function deleteDeposit(id) {
@@ -622,7 +627,7 @@
     deposits = deposits.filter((d) => d.id !== id);
     persist();
     renderDeposits();
-    showToast("Fiche supprimée.", "🗑️");
+    showToast("Fiche supprimée.");
   }
 
   // Modale retours
@@ -635,7 +640,7 @@
   }
 
   function sendFeedbackWhatsApp() {
-    const msg = `👋 Bonjour,\n\nVoici mes impressions et suggestions pour l'amélioration de l'application *DEKROU PRESSING* :\n\n- `;
+    const msg = `Bonjour, voici mon avis sur l'application Dekrou Pressing :\n\n`;
     window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, "_blank", "noopener");
     closeModals();
   }
