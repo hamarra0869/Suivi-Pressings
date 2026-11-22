@@ -1,7 +1,6 @@
 (() => {
   "use strict";
 
-  // Clés de stockage conservées pour rester compatible avec les données existantes
   const STORAGE_KEY = "vdi_pressing_deposits";
   const FEEDBACK_KEY = "vdi_pressing_feedback_prompted";
   const COUNTER_KEY = "vdi_pressing_ticket_counter";
@@ -9,16 +8,17 @@
   const DEVICE_KEY = "dekrou_device_id";
   const LICENCE_KEY = "dekrou_licence";
   const CREATED_KEY = "dekrou_created_count";
+  const BACKUP_DATE_KEY = "dekrou_last_backup";
+  const BACKUP_CHANGES_KEY = "dekrou_changes_since_backup";
+  const BACKUP_EVERY_DAYS = 7;
+  const BACKUP_EVERY_CHANGES = 15;
   const FEEDBACK_AFTER = 3;
   const PHONE_PREFIX = "225";
   const APP_NAME = "DEKROU PRESSING";
 
-  // Nombre de dépôts gratuits avant de demander une licence PRO
   const FREE_DEPOSITS = 30;
 
-  // Clé PUBLIQUE de vérification des licences (ECDSA P-256).
-  // Elle ne permet PAS de fabriquer des clés : seule la clé privée,
-  // gardée hors-ligne dans le générateur, le peut.
+  // Clé publique ECDSA P-256 (vérification des licences uniquement)
   const LICENCE_PUBLIC_KEY = {"kty":"EC","crv":"P-256","x":"OAeK5MPyvWiCSujyWAJojirhR4C8Fa1P8ElWBFv3D-k","y":"KHtUZZTWA3MwFx1k3xM1Dz_kZFAfFkJKqQSFgWabmSQ"};
   const LICENCE_PREFIX = "DEKROU-PRO|";
 
@@ -55,9 +55,10 @@
     deviceIdDisplay: $("deviceIdDisplay"),
     trialBanner: $("trialBanner"),
     trialText: $("trialText"),
+    backupBanner: $("backupBanner"),
+    backupText: $("backupText"),
     banner: $("pwaBanner"),
     toast: $("toastNotification"),
-    toastIcon: $("toastIcon"),
     toastMsg: $("toastMessage"),
   };
 
@@ -71,16 +72,15 @@
   let settings = {};
   let isPro = false;
 
-  // ---------- Utilitaires ----------
+  // Utilitaires
   const escapeHtml = (s) => String(s).replace(/[&<>"']/g, (c) => (
     { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]
   ));
 
-  // Date locale au format AAAA-MM-JJ (évite le décalage UTC de toISOString)
   const toISODate = (d) =>
     `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 
-  // "2026-11-24" -> "24/11/2026" sans passer par new Date() (qui interprète en UTC)
+  // AAAA-MM-JJ -> JJ/MM/AAAA
   const fmtDate = (iso) => {
     if (!iso || !/^\d{4}-\d{2}-\d{2}$/.test(iso)) return "—";
     const [y, m, d] = iso.split("-");
@@ -90,7 +90,7 @@
   const amount = (input) => Math.max(0, Math.round(parseFloat(input.value) || 0));
   const digitsOnly = (s) => String(s).replace(/\D/g, "");
 
-  // Numéros ivoiriens : 10 chiffres. Accepte aussi une saisie avec 225 / +225 / 00225.
+  // Numéros ivoiriens à 10 chiffres (+225 / 00225 acceptés)
   function normalizePhone(raw) {
     let d = digitsOnly(raw);
     if (d.startsWith("00" + PHONE_PREFIX)) d = d.slice(5);
@@ -103,9 +103,10 @@
     return local ? "+225 " + local.replace(/(\d{2})(?=\d)/g, "$1 ") : "";
   };
 
-  function showToast(message, icon = "✨") {
+  function showToast(message, kind = "info") {
     el.toastMsg.textContent = message;
-    el.toastIcon.textContent = icon;
+    el.toast.classList.toggle("bg-red-700", kind === "error");
+    el.toast.classList.toggle("bg-stone-900", kind !== "error");
     el.toast.classList.remove("opacity-0", "pointer-events-none", "translate-y-4");
     clearTimeout(toastTimer);
     toastTimer = setTimeout(() => {
@@ -113,13 +114,15 @@
     }, 3500);
   }
 
-  // ---------- Stockage ----------
+  // Stockage
   function persist() {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(deposits));
+      localStorage.setItem(BACKUP_CHANGES_KEY, String((parseInt(localStorage.getItem(BACKUP_CHANGES_KEY), 10) || 0) + 1));
+      refreshBackupBanner();
       return true;
     } catch (e) {
-      showToast("Stockage plein ou indisponible : données non sauvegardées.", "⚠️");
+      showToast("Stockage plein ou indisponible : données non sauvegardées.", "error");
       return false;
     }
   }
@@ -133,7 +136,7 @@
     }
   }
 
-  // ---------- Réglages du pressing ----------
+  // Réglages du pressing
   function loadSettings() {
     try {
       const v = JSON.parse(localStorage.getItem(SETTINGS_KEY) || "{}");
@@ -141,7 +144,7 @@
     } catch (e) {
       settings = {};
     }
-    el.headerName.textContent = settings.name || "Gestion des dépôts & Reçus WhatsApp";
+    el.headerName.textContent = settings.name || "Gestion des dépôts";
   }
 
   function openSettings() {
@@ -155,7 +158,7 @@
     e.preventDefault();
     const name = el.setName.value.trim();
     if (!name) {
-      showToast("Indiquez le nom de votre pressing.", "⚠️");
+      showToast("Indiquez le nom de votre pressing.", "error");
       el.setName.focus();
       return;
     }
@@ -163,10 +166,10 @@
     localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
     loadSettings();
     closeModals();
-    showToast("Réglages enregistrés.", "✅");
+    showToast("Réglages enregistrés.");
   }
 
-  // ---------- Licence PRO ----------
+  // Licence PRO
   function getDeviceId() {
     let id = localStorage.getItem(DEVICE_KEY);
     if (!/^DKX-[A-Z0-9]{4}-[A-Z0-9]{4}$/.test(id || "")) {
@@ -209,10 +212,10 @@
     el.trialText.textContent = left > 0
       ? `Version d'essai : ${left} dépôt${left > 1 ? "s" : ""} gratuit${left > 1 ? "s" : ""} restant${left > 1 ? "s" : ""}`
       : "Essai terminé";
-    el.settingsLicenceStatus.textContent = isPro ? "PRO activée ✅" : `Essai (${left} restants)`;
+    el.settingsLicenceStatus.textContent = isPro ? "PRO active" : `Essai, ${left} dépôt${left > 1 ? "s" : ""} restant${left > 1 ? "s" : ""}`;
     el.licenceStatus.textContent = isPro
-      ? "✅ Licence PRO activée sur cet appareil. Dépôts illimités."
-      : `Version d'essai : ${left} dépôt(s) gratuit(s) restant(s). Envoyez l'ID ci-dessous pour recevoir votre clé PRO.`;
+      ? "Licence PRO active sur cet appareil : dépôts illimités."
+      : `Version d'essai : ${left} dépôt(s) gratuit(s) restant(s). Envoyez l'identifiant ci-dessous pour recevoir votre clé.`;
     el.licenceForm.classList.toggle("hidden", isPro);
   }
 
@@ -225,11 +228,11 @@
 
   function requestLicence() {
     const msg =
-      `🔑 *Demande de licence PRO — ${APP_NAME}*\n\n` +
-      `🏪 *Pressing :* ${settings.name || "(non renseigné)"}\n` +
-      (settings.phone ? `📞 *Téléphone :* ${settings.phone}\n` : "") +
-      (settings.address ? `📍 *Adresse :* ${settings.address}\n` : "") +
-      `📲 *ID Appareil :* ${getDeviceId()}`;
+      `Bonjour, je souhaite activer la licence PRO de Dekrou Pressing.\n\n` +
+      `Pressing : ${settings.name || "(non renseigné)"}\n` +
+      (settings.phone ? `Téléphone : ${settings.phone}\n` : "") +
+      (settings.address ? `Adresse : ${settings.address}\n` : "") +
+      `Identifiant appareil : ${getDeviceId()}`;
     window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, "_blank", "noopener");
   }
 
@@ -239,10 +242,10 @@
       localStorage.setItem(LICENCE_KEY, key);
       isPro = true;
       refreshLicenceUI();
-      showToast("Licence PRO activée. Merci !", "🎉");
+      showToast("Licence PRO activée.");
       setTimeout(closeModals, 1200);
     } else {
-      showToast("Clé invalide pour cet appareil.", "❌");
+      showToast("Clé invalide pour cet appareil.", "error");
     }
   }
 
@@ -251,9 +254,9 @@
     refreshLicenceUI();
   }
 
-  // ---------- Sauvegarde / restauration ----------
-  function exportData() {
-    const data = {
+  // Sauvegarde / restauration
+  function buildBackup() {
+    return {
       app: "dekrou-pressing",
       version: 1,
       exportedAt: new Date().toISOString(),
@@ -264,15 +267,67 @@
       ticketCounter: localStorage.getItem(COUNTER_KEY) || "",
       createdCount: createdCount(),
     };
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+  }
+
+  function markBackedUp() {
+    localStorage.setItem(BACKUP_DATE_KEY, new Date().toISOString());
+    localStorage.setItem(BACKUP_CHANGES_KEY, "0");
+    refreshBackupBanner();
+  }
+
+  // Partage natif sur mobile, téléchargement sinon
+  async function exportData() {
+    const json = JSON.stringify(buildBackup(), null, 2);
+    const base = `sauvegarde-${(settings.name || "pressing").replace(/[^\p{L}\p{N}]+/gu, "-").toLowerCase()}-${toISODate(new Date())}`;
+
+    if (navigator.canShare) {
+      const candidates = [
+        new File([json], base + ".json", { type: "application/json" }),
+        new File([json], base + ".txt", { type: "text/plain" }),
+      ];
+      const file = candidates.find((f) => navigator.canShare({ files: [f] }));
+      if (file) {
+        try {
+          await navigator.share({
+            files: [file],
+            title: "Sauvegarde pressing",
+            text: "Sauvegarde de mes fiches (à garder, ne pas supprimer).",
+          });
+          markBackedUp();
+          showToast("Sauvegarde envoyée.");
+          return;
+        } catch (e) {
+          if (e && e.name === "AbortError") return; // partage annulé
+        }
+      }
+    }
+
     const a = document.createElement("a");
-    a.href = URL.createObjectURL(blob);
-    a.download = `sauvegarde-pressing-${toISODate(new Date())}.json`;
+    a.href = URL.createObjectURL(new Blob([json], { type: "application/json" }));
+    a.download = base + ".json";
     document.body.appendChild(a);
     a.click();
     a.remove();
     setTimeout(() => URL.revokeObjectURL(a.href), 1000);
-    showToast("Sauvegarde téléchargée.", "💾");
+    markBackedUp();
+    showToast("Sauvegarde téléchargée.");
+  }
+
+  function refreshBackupBanner() {
+    if (!el.backupBanner) return;
+    const last = localStorage.getItem(BACKUP_DATE_KEY);
+    const changes = parseInt(localStorage.getItem(BACKUP_CHANGES_KEY), 10) || 0;
+    const days = last ? Math.floor((Date.now() - new Date(last).getTime()) / 86400000) : null;
+    const due = deposits.length > 0 && (
+      changes >= BACKUP_EVERY_CHANGES ||
+      (days === null ? changes >= 3 : days >= BACKUP_EVERY_DAYS && changes > 0)
+    );
+    el.backupBanner.classList.toggle("hidden", !due);
+    if (due) {
+      el.backupText.textContent = days === null
+        ? "Aucune sauvegarde : si vous perdez ce téléphone, vous perdez vos fiches."
+        : `Dernière sauvegarde il y a ${days} jour${days > 1 ? "s" : ""} (${changes} modification${changes > 1 ? "s" : ""} depuis).`;
+    }
   }
 
   const isValidDeposit = (d) =>
@@ -286,13 +341,14 @@
       let data;
       try { data = JSON.parse(reader.result); } catch (e) { data = null; }
       if (!data || data.app !== "dekrou-pressing" || !Array.isArray(data.deposits)) {
-        showToast("Fichier de sauvegarde invalide.", "❌");
+        showToast("Fichier de sauvegarde invalide.", "error");
         return;
       }
       const clean = data.deposits.filter(isValidDeposit).map((d) => ({
         id: d.id, ticket: String(d.ticket || ""), name: d.name, phone: String(d.phone || "").replace(/\D/g, ""),
         items: d.items, total: Math.max(0, d.total), advance: Math.max(0, Number(d.advance) || 0),
         balance: Math.max(0, d.balance), pickupDate: String(d.pickupDate || ""), createdAt: String(d.createdAt || ""),
+        ...(/^\d{4}-\d{2}-\d{2}$/.test(d.readyAt || "") ? { readyAt: d.readyAt } : {}),
       }));
       if (!confirm(`Restaurer ${clean.length} fiche(s) ? Les fiches actuelles de ce téléphone seront remplacées.`)) return;
 
@@ -303,29 +359,28 @@
         settings = { name: String(st.name || ""), phone: String(st.phone || ""), address: String(st.address || "") };
         localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
       }
-      // L'ID appareil et la licence suivent la sauvegarde (changement de téléphone)
       if (/^DKX-[A-Z0-9]{4}-[A-Z0-9]{4}$/.test(data.deviceId || "")) localStorage.setItem(DEVICE_KEY, data.deviceId);
       if (data.licence) localStorage.setItem(LICENCE_KEY, String(data.licence));
       if (/^\d+$/.test(data.ticketCounter || "")) localStorage.setItem(COUNTER_KEY, data.ticketCounter);
       const restoredCount = Math.max(createdCount(), parseInt(data.createdCount, 10) || 0, clean.length);
       localStorage.setItem(CREATED_KEY, String(restoredCount));
 
+      markBackedUp();
       loadSettings();
       await checkLicence();
       refreshTicket();
       renderDeposits();
       closeModals();
-      showToast(`${clean.length} fiche(s) restaurée(s).`, "✅");
+      showToast(`${clean.length} fiche(s) restaurée(s).`);
     };
     reader.readAsText(file);
     el.importFile.value = "";
   }
 
-  // ---------- Ticket séquentiel (plus de collisions aléatoires) ----------
+  // Ticket séquentiel
   function peekNextTicket() {
     let n = parseInt(localStorage.getItem(COUNTER_KEY), 10);
     if (!Number.isFinite(n)) {
-      // Reprend après le plus grand numéro existant
       n = deposits.reduce((max, d) => {
         const v = parseInt(String(d.ticket || "").replace(/\D/g, ""), 10);
         return Number.isFinite(v) && v > max ? v : max;
@@ -343,7 +398,7 @@
     localStorage.setItem(COUNTER_KEY, currentTicket.replace(/\D/g, ""));
   }
 
-  // ---------- Formulaire ----------
+  // Formulaire
   function setDefaultPickupDate() {
     const d = new Date();
     d.setDate(d.getDate() + 2);
@@ -355,13 +410,13 @@
     const total = amount(el.total);
     const advance = amount(el.advance);
     el.balance.textContent = fmtMoney(Math.max(0, total - advance));
-    el.advance.classList.toggle("border-rose-500", advance > total && total > 0);
+    el.advance.classList.toggle("border-red-600", advance > total && total > 0);
   }
 
   function resetForm() {
     el.form.reset();
     el.balance.textContent = fmtMoney(0);
-    el.advance.classList.remove("border-rose-500");
+    el.advance.classList.remove("border-red-600");
     setDefaultPickupDate();
     refreshTicket();
     el.name.focus();
@@ -371,7 +426,7 @@
     e.preventDefault();
 
     if (!settings.name) {
-      showToast("Indiquez d'abord le nom de votre pressing.", "⚙️");
+      showToast("Indiquez d'abord le nom de votre pressing.", "error");
       openSettings();
       return;
     }
@@ -388,17 +443,17 @@
     const phone = normalizePhone(el.phone.value);
 
     if (!name || !items || total <= 0) {
-      showToast("Veuillez remplir le nom, les articles et le montant.", "⚠️");
+      showToast("Veuillez remplir le nom, les articles et le montant.", "error");
       (!name ? el.name : !items ? el.items : el.total).focus();
       return;
     }
     if (!phone) {
-      showToast("Numéro WhatsApp invalide (10 chiffres attendus).", "⚠️");
+      showToast("Numéro WhatsApp invalide (10 chiffres attendus).", "error");
       el.phone.focus();
       return;
     }
     if (advance > total) {
-      showToast("L'avance ne peut pas dépasser le montant total.", "⚠️");
+      showToast("L'avance ne peut pas dépasser le montant total.", "error");
       el.advance.focus();
       return;
     }
@@ -425,71 +480,107 @@
     localStorage.setItem(CREATED_KEY, String(createdCount() + 1));
     refreshLicenceUI();
 
-    // Ouvert de façon synchrone dans le geste utilisateur (évite le blocage des pop-ups)
     sendWhatsAppReceipt(deposit);
     renderDeposits();
     resetForm();
-    showToast("Dépôt enregistré avec succès !", "✅");
+    showToast("Dépôt enregistré.");
 
-    // Demande d'avis APRÈS l'enregistrement (avant, le dépôt était perdu)
     if (deposits.length >= FEEDBACK_AFTER && !localStorage.getItem(FEEDBACK_KEY)) {
       localStorage.setItem(FEEDBACK_KEY, "true");
       setTimeout(() => openModal(el.modal), 800);
     }
   }
 
-  // ---------- WhatsApp ----------
+  // WhatsApp
   function sendWhatsAppReceipt(dep) {
-    const msg =
-      `🧺 *REÇU DE DÉPÔT — ${(settings.name || APP_NAME).toUpperCase()}*\n` +
-      `-----------------------------------\n` +
-      `🎫 *Ticket N° :* ${dep.ticket}\n` +
-      `👤 *Client :* ${dep.name}\n` +
-      `📦 *Articles :* ${dep.items}\n\n` +
-      `💰 *Montant Total :* ${fmtMoney(dep.total)}\n` +
-      `💵 *Avance Payée :* ${fmtMoney(dep.advance)}\n` +
-      `🔴 *Reste à Payer :* *${fmtMoney(dep.balance)}*\n\n` +
-      `📅 *Date de Retrait Prévue :* *${fmtDate(dep.pickupDate)}*\n` +
-      `-----------------------------------\n` +
-      (settings.address ? `📍 ${settings.address}\n` : "") +
-      (settings.phone ? `📞 ${settings.phone}\n` : "") +
-      `Merci pour votre confiance ! Merci de présenter ce message lors du retrait.\n` +
-      `_Conformément à la loi n° 2013-450, vos coordonnées sont uniquement conservées pour la gestion de votre reçu._\n` +
-      `_Reçu généré avec ${APP_NAME}_`;
+    const shop = settings.name || APP_NAME;
+    const lines = [
+      `*${shop}*`,
+      `Reçu de dépôt ${dep.ticket}`,
+      ``,
+      `Client : ${dep.name}`,
+      `Articles : ${dep.items}`,
+      ``,
+      `Total : ${fmtMoney(dep.total)}`,
+      `Avance : ${fmtMoney(dep.advance)}`,
+      `*Reste à payer : ${fmtMoney(dep.balance)}*`,
+      ``,
+      `Retrait prévu le ${fmtDate(dep.pickupDate)}`,
+      [settings.address, settings.phone].filter(Boolean).join(" · "),
+      ``,
+      `Merci de présenter ce reçu au retrait.`,
+      `_Vos coordonnées servent uniquement au suivi de ce dépôt (loi n° 2013-450)._`,
+      `_Reçu Dekrou Pressing_`,
+    ];
+    const msg = lines.filter((l, i, a) => l !== "" || a[i - 1] !== "").join("\n");
 
     const phone = digitsOnly(dep.phone);
     window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`, "_blank", "noopener");
   }
 
-  // ---------- Liste ----------
+  function sendReadyMessage(id) {
+    const dep = findDeposit(id);
+    if (!dep) return;
+    const first = !dep.readyAt;
+    const shop = settings.name || APP_NAME;
+    const lines = [
+      `Bonjour ${dep.name},`,
+      ``,
+      first
+        ? `Votre linge est prêt chez *${shop}*.`
+        : `Votre linge vous attend chez *${shop}* depuis le ${fmtDate(dep.readyAt)}.`,
+      ``,
+      `Ticket : ${dep.ticket}`,
+      `Articles : ${dep.items}`,
+      dep.balance > 0 ? `*Reste à payer au retrait : ${fmtMoney(dep.balance)}*` : `Déjà réglé, rien à payer.`,
+      ``,
+      [settings.address, settings.phone].filter(Boolean).join(" · "),
+      `Merci de présenter votre ticket au retrait.`,
+    ];
+    const msg = lines.filter((l, i, a) => l !== "" || a[i - 1] !== "").join("\n");
+
+    window.open(`https://wa.me/${digitsOnly(dep.phone)}?text=${encodeURIComponent(msg)}`, "_blank", "noopener");
+    if (first) {
+      dep.readyAt = toISODate(new Date());
+      persist();
+      renderDeposits();
+    }
+    showToast(first ? "Client prévenu : linge prêt." : "Rappel envoyé.");
+  }
+
+  // Liste
   function depositCard(dep, today) {
     const paid = dep.balance === 0;
     const late = dep.pickupDate && dep.pickupDate < today;
     const id = escapeHtml(dep.id);
+    const tags = [
+      dep.readyAt ? `<span class="rounded bg-blue-50 px-1.5 py-0.5 text-[12px] font-medium text-blue-800">Prêt le ${fmtDate(dep.readyAt).slice(0, 5)}</span>` : "",
+      late ? `<span class="rounded bg-red-50 px-1.5 py-0.5 text-[12px] font-medium text-red-700">En retard</span>` : "",
+    ].join("");
     return `
-      <article class="bg-slate-900 border ${late ? "border-rose-500/40" : "border-slate-800"} rounded-2xl p-4 space-y-3 shadow-lg">
-        <div class="flex justify-between items-start gap-2 border-b border-slate-800 pb-2">
+      <article class="card p-4">
+        <div class="flex items-start justify-between gap-3">
           <div class="min-w-0">
-            <span class="font-mono font-bold text-sky-400 text-xs">${escapeHtml(dep.ticket)}</span>
-            <h4 class="font-bold text-sm text-white break-words">${escapeHtml(dep.name)}</h4>
-            ${dep.phone ? `<span class="font-mono text-[11px] text-slate-500">${escapeHtml(prettyPhone(dep.phone))}</span>` : ""}
+            <div class="flex flex-wrap items-center gap-1.5">
+              <span class="font-mono text-[13px] text-stone-500">${escapeHtml(dep.ticket)}</span>${tags}
+            </div>
+            <h4 class="break-words text-[15px] font-semibold">${escapeHtml(dep.name)}</h4>
+            ${dep.phone ? `<span class="text-[13px] tabular-nums text-stone-500">${escapeHtml(prettyPhone(dep.phone))}</span>` : ""}
           </div>
-          <span class="shrink-0 text-[10px] font-bold px-2 py-0.5 rounded-full border ${paid
-            ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/30"
-            : "bg-amber-500/10 text-amber-400 border-amber-500/30"}">
-            ${paid ? "SOLDÉ" : "RESTE : " + fmtMoney(dep.balance)}
-          </span>
+          <div class="shrink-0 text-right">
+            <span class="block text-[12px] text-stone-500">${paid ? "Payé" : "Reste"}</span>
+            <span class="text-[15px] font-semibold tabular-nums ${paid ? "text-green-700" : "text-stone-900"}">${paid ? fmtMoney(dep.total) : fmtMoney(dep.balance)}</span>
+          </div>
         </div>
 
-        <p class="text-xs text-slate-300 bg-slate-950 p-2 rounded-xl border border-slate-800/80 whitespace-pre-line break-words">${escapeHtml(dep.items)}</p>
+        <p class="mt-2 whitespace-pre-line break-words text-sm text-stone-700">${escapeHtml(dep.items)}</p>
+        <p class="mt-1 text-[13px] ${late ? "text-red-700" : "text-stone-500"}">Retrait prévu le ${fmtDate(dep.pickupDate)}</p>
 
-        <div class="flex justify-between items-center gap-2 text-[11px] text-slate-400 pt-1">
-          <span>Retrait : <strong class="${late ? "text-rose-400" : "text-slate-200"}">${fmtDate(dep.pickupDate)}${late ? " ⏰" : ""}</strong></span>
-          <div class="flex gap-2">
-            ${paid ? "" : `<button type="button" data-action="settle" data-id="${id}" class="bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 px-2.5 py-1 rounded-lg text-[10px] font-bold">💵 Solder</button>`}
-            <button type="button" data-action="resend" data-id="${id}" class="bg-slate-800 hover:bg-slate-700 text-sky-400 border border-slate-700 px-2.5 py-1 rounded-lg text-[10px] font-bold">💬 Reçu</button>
-            <button type="button" data-action="delete" data-id="${id}" aria-label="Supprimer la fiche" class="bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30 px-2.5 py-1 rounded-lg text-[10px] font-bold">🗑️</button>
-          </div>
+        <div class="mt-3 flex flex-wrap gap-2 border-t border-stone-100 pt-3">
+          <button type="button" data-action="ready" data-id="${id}" class="${dep.readyAt ? "btn-secondary" : "btn-primary"} btn-sm">${dep.readyAt ? "Relancer" : "Linge prêt"}</button>
+          ${paid ? "" : `<button type="button" data-action="settle" data-id="${id}" class="btn-secondary btn-sm">Encaisser</button>`}
+          <button type="button" data-action="resend" data-id="${id}" class="btn-secondary btn-sm">Reçu</button>
+          <button type="button" data-action="delete" data-id="${id}" class="btn-danger btn-sm ml-auto">Supprimer</button>
         </div>
       </article>`;
   }
@@ -511,10 +602,9 @@
     el.statBalance.textContent = fmtMoney(deposits.reduce((s, d) => s + (d.balance || 0), 0));
     el.statLate.textContent = deposits.filter((d) => d.pickupDate && d.pickupDate < today).length;
 
-    // Une seule écriture DOM (l'ancien `innerHTML +=` en boucle était en O(n²))
     el.list.innerHTML = visible.length
       ? visible.map((d) => depositCard(d, today)).join("")
-      : `<div class="text-center py-8 text-slate-500 text-xs">${n ? "Aucun résultat." : "Aucun dépôt enregistré."}</div>`;
+      : `<div class="py-8 text-center text-sm text-stone-500">${n ? "Aucun résultat." : "Aucun dépôt enregistré."}</div>`;
   }
 
   function findDeposit(id) {
@@ -523,12 +613,12 @@
 
   function settleDeposit(id) {
     const dep = findDeposit(id);
-    if (!dep || !confirm(`Confirmer l'encaissement de ${fmtMoney(dep.balance)} pour ${dep.name} ?`)) return;
+    if (!dep || !confirm(`Encaisser ${fmtMoney(dep.balance)} de ${dep.name} ?`)) return;
     dep.advance = dep.total;
     dep.balance = 0;
     persist();
     renderDeposits();
-    showToast("Paiement soldé.", "💵");
+    showToast("Paiement enregistré.");
   }
 
   function deleteDeposit(id) {
@@ -537,10 +627,10 @@
     deposits = deposits.filter((d) => d.id !== id);
     persist();
     renderDeposits();
-    showToast("Fiche supprimée.", "🗑️");
+    showToast("Fiche supprimée.");
   }
 
-  // ---------- Modale retours ----------
+  // Modale retours
   function openModal(m) {
     closeModals();
     m.classList.remove("hidden");
@@ -550,12 +640,12 @@
   }
 
   function sendFeedbackWhatsApp() {
-    const msg = `👋 Bonjour,\n\nVoici mes impressions et suggestions pour l'amélioration de l'application *DEKROU PRESSING* :\n\n- `;
+    const msg = `Bonjour, voici mon avis sur l'application Dekrou Pressing :\n\n`;
     window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, "_blank", "noopener");
     closeModals();
   }
 
-  // ---------- PWA ----------
+  // PWA
   window.addEventListener("beforeinstallprompt", (e) => {
     e.preventDefault();
     deferredPrompt = e;
@@ -573,13 +663,12 @@
   }
 
   function registerServiceWorker() {
-    // Un service worker doit être un vrai fichier servi en HTTPS (les URL blob: sont refusées)
     if ("serviceWorker" in navigator && location.protocol.startsWith("http")) {
       navigator.serviceWorker.register("sw.js").catch(() => {});
     }
   }
 
-  // ---------- Événements (délégation, plus de onclick inline) ----------
+  // Événements
   const actions = {
     "install": installPWA,
     "open-feedback": () => openModal(el.modal),
@@ -593,6 +682,7 @@
     "send-feedback": sendFeedbackWhatsApp,
     "resend": (id) => { const d = findDeposit(id); if (d) sendWhatsAppReceipt(d); },
     "settle": settleDeposit,
+    "ready": sendReadyMessage,
     "delete": deleteDeposit,
   };
 
@@ -613,7 +703,6 @@
   el.advance.addEventListener("input", calculateBalance);
   el.search.addEventListener("input", renderDeposits);
 
-  // Synchronise plusieurs onglets ouverts
   window.addEventListener("storage", (e) => {
     if (e.key === STORAGE_KEY) { loadDeposits(); renderDeposits(); }
     if (e.key === COUNTER_KEY) refreshTicket();
@@ -621,13 +710,14 @@
     if (e.key === LICENCE_KEY || e.key === CREATED_KEY) checkLicence();
   });
 
-  // ---------- Démarrage ----------
+  // Démarrage
   loadSettings();
   loadDeposits();
-  // Les dépôts existants comptent dans la période d'essai
   if (localStorage.getItem(CREATED_KEY) === null) localStorage.setItem(CREATED_KEY, String(deposits.length));
   renderDeposits();
   checkLicence();
+  refreshBackupBanner();
+  if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
   if (!settings.name) setTimeout(openSettings, 400);
   refreshTicket();
   setDefaultPickupDate();

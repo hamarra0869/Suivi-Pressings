@@ -1,250 +1,228 @@
 <!DOCTYPE html>
-<html lang="fr" class="dark">
+<html lang="fr">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <title>DEKROU PRESSING — Gestion & Reçus WhatsApp</title>
-  <!-- Sécurité : seuls les fichiers de ce site peuvent s'exécuter (aucun script externe ni injecté) -->
+  <title>DEKROU PRESSING — Gestion des dépôts</title>
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; manifest-src 'self'; worker-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
   <meta name="referrer" content="no-referrer">
-  <meta name="description" content="Gestion des dépôts de pressing et envoi de reçus WhatsApp.">
+  <meta name="description" content="Gestion des dépôts de pressing et reçus WhatsApp.">
 
-  <meta name="theme-color" content="#0284c7">
+  <meta name="theme-color" content="#1e3a8a">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="apple-mobile-web-app-title" content="DEKROU">
 
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="icon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="icon.svg">
-
-  <!-- CSS Tailwind précompilé (voir README) : plus de CDN, fonctionne hors-ligne -->
   <link rel="stylesheet" href="styles.css">
 </head>
-<body class="bg-slate-950 text-slate-100 min-h-screen font-sans antialiased pb-20">
+<body class="min-h-screen bg-stone-100 font-sans text-stone-900 antialiased pb-16">
 
-  <!-- Bannière d'Installation PWA -->
-  <div id="pwaBanner" class="hidden bg-sky-600 text-white px-4 py-2.5 flex justify-between items-center text-xs font-semibold shadow-md sticky top-0 z-40">
-    <span class="flex items-center gap-2">📱 Installer l'application sur l'écran d'accueil</span>
-    <button type="button" data-action="install" class="bg-white text-sky-700 px-3 py-1 rounded-lg font-bold text-[11px] shadow hover:bg-slate-100 transition">Installer</button>
+  <!-- Installation -->
+  <div id="pwaBanner" class="hidden flex items-center justify-between gap-3 bg-blue-900 px-4 py-2 text-sm text-white">
+    <span>Installer l'application sur ce téléphone</span>
+    <button type="button" data-action="install" class="rounded bg-white px-3 py-1 text-sm font-medium text-blue-900">Installer</button>
   </div>
 
-  <!-- Notification Toast -->
-  <div id="toastNotification" role="status" aria-live="polite" class="fixed bottom-5 left-1/2 -translate-x-1/2 z-50 bg-slate-900 border border-slate-700 text-white px-4 py-2.5 rounded-xl shadow-2xl text-xs font-semibold flex items-center gap-2 transition-all duration-300 opacity-0 pointer-events-none translate-y-4">
-    <span id="toastIcon">✨</span>
+  <!-- Toast -->
+  <div id="toastNotification" role="status" aria-live="polite" class="pointer-events-none fixed bottom-4 left-1/2 z-[60] w-[calc(100%-2rem)] max-w-sm -translate-x-1/2 translate-y-4 rounded-md bg-stone-900 px-4 py-3 text-sm text-white opacity-0 shadow-lg transition-all duration-200">
     <span id="toastMessage"></span>
   </div>
 
-  <!-- Header App -->
-  <header class="bg-slate-900/90 border-b border-slate-800 sticky top-0 z-30 backdrop-blur">
-    <div class="max-w-xl mx-auto px-4 py-3 flex items-center justify-between">
-      <div class="flex items-center gap-3">
-        <div class="w-10 h-10 bg-sky-500/20 border border-sky-500/40 rounded-xl flex items-center justify-center text-xl shadow-lg" aria-hidden="true">🧺</div>
-        <div>
-          <h1 class="font-black text-base text-white tracking-tight flex items-center gap-2">
-            DEKROU <span class="text-sky-400">PRESSING</span>
-          </h1>
-          <p id="headerPressingName" class="text-[11px] text-slate-400 truncate max-w-[11rem]">Gestion des dépôts & Reçus WhatsApp</p>
+  <!-- En-tête -->
+  <header class="border-b border-stone-200 bg-white">
+    <div class="mx-auto flex max-w-xl items-center justify-between gap-3 px-4 py-3">
+      <div class="flex min-w-0 items-center gap-3">
+        <img src="icon.svg" alt="" class="h-9 w-9 rounded-md">
+        <div class="min-w-0">
+          <h1 class="text-[15px] font-semibold leading-tight">Dekrou Pressing</h1>
+          <p id="headerPressingName" class="truncate text-[13px] text-stone-500">Gestion des dépôts</p>
         </div>
       </div>
-
       <div class="flex items-center gap-2">
-        <button type="button" data-action="open-feedback" class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs px-3 py-1.5 rounded-xl font-bold text-sky-400 transition">💡 Avis</button>
-        <button type="button" data-action="open-settings" aria-label="Réglages" class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-sm px-2.5 py-1 rounded-xl transition">⚙️</button>
+        <button type="button" data-action="open-feedback" class="btn-secondary btn-sm">Avis</button>
+        <button type="button" data-action="open-settings" class="btn-secondary btn-sm">Réglages</button>
       </div>
     </div>
   </header>
 
-  <main class="max-w-xl mx-auto px-4 pt-4 space-y-5">
+  <main class="mx-auto max-w-xl space-y-4 px-4 pt-4">
 
-    <!-- Bandeau version d'essai -->
-    <button type="button" id="trialBanner" data-action="open-licence" class="hidden w-full text-left bg-amber-500/10 border border-amber-500/30 text-amber-300 rounded-xl px-3 py-2 text-xs font-semibold">
-      <span id="trialText">Version d'essai</span> — <span class="underline">Passer en PRO</span>
+    <!-- Rappel de sauvegarde -->
+    <div id="backupBanner" class="hidden flex items-center justify-between gap-3 rounded-md border border-red-200 bg-red-50 px-3 py-2">
+      <span id="backupText" class="text-[13px] text-red-800">Pensez à sauvegarder vos fiches.</span>
+      <button type="button" data-action="export" class="btn btn-sm shrink-0 bg-red-700 text-white hover:bg-red-800">Sauvegarder</button>
+    </div>
+
+    <!-- Version d'essai -->
+    <button type="button" id="trialBanner" data-action="open-licence" class="hidden w-full rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-left text-[13px] text-amber-900">
+      <span id="trialText">Version d'essai</span> · <span class="font-medium underline">Passer en PRO</span>
     </button>
 
-    <!-- Formulaire d'Enregistrement de Dépôt -->
-    <form id="depositForm" novalidate class="bg-slate-900 border border-slate-800 rounded-2xl p-4 space-y-4 shadow-xl">
-      <div class="flex justify-between items-center border-b border-slate-800 pb-2">
-        <h2 class="font-bold text-sm text-white">✨ Nouveau Dépôt Client</h2>
-        <span id="ticketNumberDisplay" class="text-xs font-mono font-bold text-sky-400 bg-sky-500/10 border border-sky-500/20 px-2 py-0.5 rounded-lg">TICK-----</span>
+    <!-- Nouveau dépôt -->
+    <form id="depositForm" novalidate class="card space-y-4 p-4">
+      <div class="flex items-center justify-between">
+        <h2 class="text-base font-semibold">Nouveau dépôt</h2>
+        <span id="ticketNumberDisplay" class="font-mono text-sm text-stone-500">—</span>
       </div>
 
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <div>
-          <label for="clientName" class="block text-xs font-semibold text-slate-300 mb-1">Nom du Client</label>
-          <input type="text" id="clientName" placeholder="Ex: M. Kouassi" autocomplete="off" maxlength="80"
-            class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-sky-500 transition">
+          <label for="clientName" class="label">Nom du client</label>
+          <input type="text" id="clientName" class="field" placeholder="M. Kouassi" autocomplete="off" maxlength="80">
         </div>
-
         <div>
-          <label for="clientPhone" class="block text-xs font-semibold text-slate-300 mb-1">Téléphone Client (WhatsApp)</label>
-          <div class="flex items-stretch bg-slate-950 border border-slate-700 rounded-xl focus-within:border-sky-500 transition overflow-hidden">
-            <span class="px-3 flex items-center text-sm font-mono font-bold text-slate-400 border-r border-slate-800 select-none">+225</span>
-            <input type="tel" id="clientPhone" inputmode="numeric" autocomplete="off" placeholder="07 00 00 00 00" maxlength="20"
-              class="w-full bg-transparent px-3 py-2.5 text-sm font-mono font-bold text-sky-400 focus:outline-none">
+          <label for="clientPhone" class="label">WhatsApp du client</label>
+          <div class="flex">
+            <span class="inline-flex items-center rounded-l-md border border-r-0 border-stone-300 bg-stone-50 px-3 text-[15px] text-stone-500">+225</span>
+            <input type="tel" id="clientPhone" class="field rounded-l-none" inputmode="numeric" autocomplete="off" placeholder="07 00 00 00 00" maxlength="20">
           </div>
         </div>
       </div>
 
       <div>
-        <label for="itemsDescription" class="block text-xs font-semibold text-slate-300 mb-1">Articles Dépôt (Type & Nombre)</label>
-        <textarea id="itemsDescription" rows="2" placeholder="Ex: 3 Chemises, 2 Pantalons costume" maxlength="500"
-          class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-sky-500 transition"></textarea>
+        <label for="itemsDescription" class="label">Articles</label>
+        <textarea id="itemsDescription" rows="2" class="field" placeholder="3 chemises, 2 pantalons" maxlength="500"></textarea>
       </div>
 
       <div class="grid grid-cols-2 gap-3">
         <div>
-          <label for="totalAmount" class="block text-xs font-semibold text-slate-300 mb-1">Montant Total (FCFA)</label>
-          <input type="number" id="totalAmount" placeholder="0" min="0" step="1" inputmode="numeric"
-            class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2.5 text-sm font-mono font-bold text-emerald-400 focus:outline-none focus:border-sky-500 transition">
+          <label for="totalAmount" class="label">Montant total (FCFA)</label>
+          <input type="number" id="totalAmount" class="field tabular-nums" placeholder="0" min="0" step="1" inputmode="numeric">
         </div>
         <div>
-          <label for="advanceAmount" class="block text-xs font-semibold text-slate-300 mb-1">Avance Payée (FCFA)</label>
-          <input type="number" id="advanceAmount" placeholder="0" min="0" step="1" inputmode="numeric"
-            class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2.5 text-sm font-mono font-bold text-sky-400 focus:outline-none focus:border-sky-500 transition">
+          <label for="advanceAmount" class="label">Avance (FCFA)</label>
+          <input type="number" id="advanceAmount" class="field tabular-nums" placeholder="0" min="0" step="1" inputmode="numeric">
         </div>
       </div>
 
-      <div class="grid grid-cols-2 gap-3 pt-1">
-        <div class="bg-slate-950 border border-slate-800 p-2.5 rounded-xl">
-          <span class="block text-[10px] text-slate-400 font-semibold">Reste à Payer :</span>
-          <span id="balanceDisplay" class="text-sm font-black text-rose-400 font-mono">0 FCFA</span>
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <span class="label">Reste à payer</span>
+          <span id="balanceDisplay" class="block py-2 text-[15px] font-semibold tabular-nums">0 FCFA</span>
         </div>
         <div>
-          <label for="pickupDate" class="block text-xs font-semibold text-slate-300 mb-1">Date Retrait Prévue</label>
-          <input type="date" id="pickupDate"
-            class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-sky-500 transition">
+          <label for="pickupDate" class="label">Retrait prévu</label>
+          <input type="date" id="pickupDate" class="field">
         </div>
       </div>
 
-      <button type="submit"
-        class="w-full bg-emerald-600 hover:bg-emerald-500 active:scale-[0.98] text-white font-bold py-3 rounded-xl text-sm transition shadow-lg shadow-emerald-600/20 flex items-center justify-center gap-2">
-        💬 Enregistrer & Envoyer Reçu WhatsApp
-      </button>
+      <button type="submit" class="btn-whatsapp w-full py-2.5 text-[15px]">Enregistrer et envoyer le reçu</button>
     </form>
 
-    <!-- Liste des Dépôts En Cours -->
+    <!-- Dépôts en cours -->
     <section class="space-y-3">
-      <div class="flex justify-between items-center px-1">
-        <h3 class="font-bold text-sm text-white">📋 Dépôts en Cours</h3>
-        <span id="depositCount" class="text-xs text-slate-400">0 fiche</span>
+      <div class="flex items-baseline justify-between">
+        <h3 class="text-base font-semibold">Dépôts en cours</h3>
+        <span id="depositCount" class="text-[13px] text-stone-500">0 fiche</span>
       </div>
 
-      <div id="statsBar" class="hidden grid grid-cols-2 gap-2 text-[11px]">
-        <div class="bg-slate-900 border border-slate-800 rounded-xl px-3 py-2">
-          <span class="text-slate-400">Reste à encaisser</span>
-          <strong id="statBalance" class="block font-mono text-amber-400 text-sm">0 FCFA</strong>
+      <div id="statsBar" class="hidden grid grid-cols-2 gap-3">
+        <div class="card px-3 py-2">
+          <span class="block text-[13px] text-stone-500">Reste à encaisser</span>
+          <strong id="statBalance" class="text-base font-semibold tabular-nums">0 FCFA</strong>
         </div>
-        <div class="bg-slate-900 border border-slate-800 rounded-xl px-3 py-2">
-          <span class="text-slate-400">Retraits en retard</span>
-          <strong id="statLate" class="block font-mono text-rose-400 text-sm">0</strong>
+        <div class="card px-3 py-2">
+          <span class="block text-[13px] text-stone-500">Retraits en retard</span>
+          <strong id="statLate" class="text-base font-semibold tabular-nums">0</strong>
         </div>
       </div>
 
-      <label for="searchInput" class="sr-only">Rechercher un dépôt</label>
-      <input type="search" id="searchInput" placeholder="🔍 Rechercher (nom, ticket, téléphone, article)…" autocomplete="off"
-        class="hidden w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-sky-500 transition">
+      <label for="searchInput" class="sr-only">Rechercher</label>
+      <input type="search" id="searchInput" class="field hidden" placeholder="Rechercher : nom, ticket, téléphone, article" autocomplete="off">
 
       <div id="depositsContainer" class="space-y-3"></div>
     </section>
-
   </main>
 
-
-  <!-- MODALE RÉGLAGES -->
-  <div id="settingsModal" role="dialog" aria-modal="true" aria-labelledby="settingsTitle" class="modal fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
-    <div class="bg-slate-900 border border-slate-800 w-full max-w-sm rounded-2xl p-5 space-y-4 shadow-2xl relative max-h-[90vh] overflow-y-auto">
-      <button type="button" data-action="close-modal" aria-label="Fermer" class="absolute top-3 right-3 text-slate-400 hover:text-white font-bold text-sm">✕</button>
-      <h3 id="settingsTitle" class="font-black text-base text-white">⚙️ Mon pressing</h3>
-      <p class="text-[11px] text-slate-400">Ces informations apparaissent sur les reçus WhatsApp envoyés à vos clients.</p>
+  <!-- Réglages -->
+  <div id="settingsModal" role="dialog" aria-modal="true" aria-labelledby="settingsTitle" class="modal hidden">
+    <div class="modal-panel space-y-4">
+      <button type="button" data-action="close-modal" aria-label="Fermer" class="modal-close">
+        <svg viewBox="0 0 20 20" class="h-5 w-5" aria-hidden="true"><path d="M5 5l10 10M15 5L5 15" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+      </button>
+      <div>
+        <h3 id="settingsTitle" class="text-lg font-semibold">Mon pressing</h3>
+        <p class="text-[13px] text-stone-500">Ces informations figurent sur les reçus envoyés à vos clients.</p>
+      </div>
 
       <form id="settingsForm" novalidate class="space-y-3">
         <div>
-          <label for="setName" class="block text-xs font-semibold text-slate-300 mb-1">Nom du pressing *</label>
-          <input type="text" id="setName" maxlength="60" placeholder="Ex: Pressing Le Lys"
-            class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-sky-500">
+          <label for="setName" class="label">Nom du pressing</label>
+          <input type="text" id="setName" class="field" maxlength="60" placeholder="Pressing Le Lys">
         </div>
         <div>
-          <label for="setPhone" class="block text-xs font-semibold text-slate-300 mb-1">Téléphone du pressing</label>
-          <input type="tel" id="setPhone" maxlength="20" inputmode="tel" placeholder="Ex: 07 00 00 00 00"
-            class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-sky-500">
+          <label for="setPhone" class="label">Téléphone</label>
+          <input type="tel" id="setPhone" class="field" maxlength="20" inputmode="tel" placeholder="07 00 00 00 00">
         </div>
         <div>
-          <label for="setAddress" class="block text-xs font-semibold text-slate-300 mb-1">Adresse / Quartier</label>
-          <input type="text" id="setAddress" maxlength="100" placeholder="Ex: Cocody Angré, 8e tranche"
-            class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-sky-500">
+          <label for="setAddress" class="label">Adresse</label>
+          <input type="text" id="setAddress" class="field" maxlength="100" placeholder="Cocody Angré, 8e tranche">
         </div>
-        <button type="submit" class="w-full bg-sky-600 hover:bg-sky-500 text-white font-bold py-2.5 rounded-xl text-sm transition">Enregistrer</button>
+        <button type="submit" class="btn-primary w-full">Enregistrer</button>
       </form>
 
-      <div class="border-t border-slate-800 pt-3 space-y-2">
-        <h4 class="text-xs font-bold text-white">💾 Sauvegarde des données</h4>
-        <p class="text-[11px] text-slate-400">Les fiches restent uniquement sur ce téléphone. Faites une sauvegarde régulièrement (ou avant de changer de téléphone).</p>
+      <div class="space-y-2 border-t border-stone-200 pt-4">
+        <h4 class="text-sm font-semibold">Sauvegarde</h4>
+        <p class="text-[13px] text-stone-500">Les fiches sont enregistrées sur ce téléphone uniquement. Envoyez régulièrement une copie dans WhatsApp, Google Drive ou Gmail.</p>
         <div class="grid grid-cols-2 gap-2">
-          <button type="button" data-action="export" class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 text-xs py-2 rounded-lg font-semibold">⬇️ Sauvegarder</button>
-          <button type="button" data-action="import" class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 text-xs py-2 rounded-lg font-semibold">⬆️ Restaurer</button>
+          <button type="button" data-action="export" class="btn-secondary">Sauvegarder</button>
+          <button type="button" data-action="import" class="btn-secondary">Restaurer</button>
         </div>
-        <input type="file" id="importFile" accept="application/json,.json" class="hidden">
+        <input type="file" id="importFile" accept="application/json,.json,text/plain,.txt" class="hidden">
       </div>
 
-      <div class="border-t border-slate-800 pt-3">
-        <button type="button" data-action="open-licence" class="w-full bg-slate-800 hover:bg-slate-700 border border-slate-700 text-amber-300 text-xs py-2 rounded-lg font-semibold">🔑 Licence : <span id="settingsLicenceStatus">Essai</span></button>
+      <div class="border-t border-stone-200 pt-4">
+        <button type="button" data-action="open-licence" class="flex w-full items-center justify-between text-sm">
+          <span class="font-semibold">Licence</span>
+          <span id="settingsLicenceStatus" class="text-stone-500">Essai</span>
+        </button>
       </div>
     </div>
   </div>
 
-  <!-- MODALE LICENCE PRO -->
-  <div id="licenceModal" role="dialog" aria-modal="true" aria-labelledby="licenceTitle" class="modal fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
-    <div class="bg-slate-900 border border-slate-800 w-full max-w-sm rounded-2xl p-5 space-y-4 shadow-2xl relative">
-      <button type="button" data-action="close-modal" aria-label="Fermer" class="absolute top-3 right-3 text-slate-400 hover:text-white font-bold text-sm">✕</button>
-      <div class="text-center space-y-1">
-        <div class="w-12 h-12 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-2xl flex items-center justify-center mx-auto mb-1" aria-hidden="true">🔑</div>
-        <h3 id="licenceTitle" class="font-black text-base text-white">Licence PRO</h3>
-        <p id="licenceStatus" class="text-xs text-slate-400"></p>
+  <!-- Licence -->
+  <div id="licenceModal" role="dialog" aria-modal="true" aria-labelledby="licenceTitle" class="modal hidden">
+    <div class="modal-panel space-y-4">
+      <button type="button" data-action="close-modal" aria-label="Fermer" class="modal-close">
+        <svg viewBox="0 0 20 20" class="h-5 w-5" aria-hidden="true"><path d="M5 5l10 10M15 5L5 15" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+      </button>
+      <div>
+        <h3 id="licenceTitle" class="text-lg font-semibold">Licence PRO</h3>
+        <p id="licenceStatus" class="text-[13px] text-stone-500"></p>
       </div>
 
-      <div class="bg-slate-950 border border-slate-800 rounded-xl p-3 text-center">
-        <span class="block text-[10px] uppercase font-bold text-slate-500 tracking-wider">ID de cet appareil</span>
-        <span id="deviceIdDisplay" class="font-mono font-black text-sky-400 text-lg select-all">DKX-----</span>
+      <div class="rounded-md bg-stone-100 px-3 py-2">
+        <span class="block text-[12px] text-stone-500">Identifiant de cet appareil</span>
+        <span id="deviceIdDisplay" class="select-all font-mono text-lg font-semibold">—</span>
       </div>
 
       <div id="licenceForm" class="space-y-3">
-        <button type="button" data-action="request-licence" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2.5 rounded-xl text-xs transition">💬 Demander ma clé PRO sur WhatsApp</button>
+        <button type="button" data-action="request-licence" class="btn-whatsapp w-full">Demander une clé par WhatsApp</button>
         <div>
-          <label for="licenceKeyInput" class="block text-xs font-semibold text-slate-300 mb-1">Clé PRO reçue</label>
-          <textarea id="licenceKeyInput" rows="3" placeholder="Collez ici la clé PRO-…" autocomplete="off" spellcheck="false"
-            class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-[11px] font-mono text-white focus:outline-none focus:border-sky-500 break-all"></textarea>
+          <label for="licenceKeyInput" class="label">Clé reçue</label>
+          <textarea id="licenceKeyInput" rows="3" class="field break-all font-mono text-[13px]" placeholder="PRO-…" autocomplete="off" spellcheck="false"></textarea>
         </div>
-        <button type="button" data-action="activate-licence" class="w-full bg-sky-600 hover:bg-sky-500 text-white font-bold py-2.5 rounded-xl text-xs transition">✅ Activer</button>
+        <button type="button" data-action="activate-licence" class="btn-primary w-full">Activer</button>
       </div>
     </div>
   </div>
 
-  <!-- MODALE RETOURS -->
-  <div id="feedbackModal" role="dialog" aria-modal="true" aria-labelledby="feedbackTitle" class="modal fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
-    <div class="bg-slate-900 border border-slate-800 w-full max-w-sm rounded-2xl p-5 space-y-4 shadow-2xl relative">
-      <button type="button" data-action="close-modal" aria-label="Fermer" class="absolute top-3 right-3 text-slate-400 hover:text-white font-bold text-sm">✕</button>
-
-      <div class="text-center space-y-1">
-        <div class="w-12 h-12 rounded-2xl bg-sky-500/10 border border-sky-500/20 text-sky-400 text-2xl flex items-center justify-center mx-auto mb-1" aria-hidden="true">💬</div>
-        <h3 id="feedbackTitle" class="font-black text-base text-white">Vos impressions comptent !</h3>
-        <p class="text-xs text-slate-400">Aidez-nous à améliorer l'application pour votre pressing.</p>
-      </div>
-
-      <div class="bg-slate-950 p-3.5 rounded-xl border border-slate-800 space-y-2 text-xs text-slate-300">
-        <p>Merci d'utiliser <strong>DEKROU PRESSING</strong> !</p>
-        <p class="text-slate-400 text-[11px]">Quelles fonctionnalités aimeriez-vous voir ajouter ? L'application est-elle pratique pour votre quotidien ?</p>
-      </div>
-
-      <button type="button" data-action="send-feedback"
-        class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded-xl text-xs transition shadow-lg shadow-emerald-600/20 flex items-center justify-center gap-2">
-        💬 Donner mes impressions sur WhatsApp
+  <!-- Avis -->
+  <div id="feedbackModal" role="dialog" aria-modal="true" aria-labelledby="feedbackTitle" class="modal hidden">
+    <div class="modal-panel space-y-4">
+      <button type="button" data-action="close-modal" aria-label="Fermer" class="modal-close">
+        <svg viewBox="0 0 20 20" class="h-5 w-5" aria-hidden="true"><path d="M5 5l10 10M15 5L5 15" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
       </button>
-
-      <button type="button" data-action="close-modal" class="w-full bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs py-2 rounded-xl font-semibold transition">
-        Continuer l'utilisation
-      </button>
+      <div>
+        <h3 id="feedbackTitle" class="text-lg font-semibold">Votre avis</h3>
+        <p class="text-[13px] text-stone-500">Qu'est-ce qui vous serait utile au quotidien ? Qu'est-ce qui vous gêne ? Vos remarques servent à améliorer l'application.</p>
+      </div>
+      <button type="button" data-action="send-feedback" class="btn-whatsapp w-full">Donner mon avis par WhatsApp</button>
+      <button type="button" data-action="close-modal" class="btn-secondary w-full">Plus tard</button>
     </div>
   </div>
 

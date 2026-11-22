@@ -1,5 +1,4 @@
-// Service worker : l'application fonctionne entièrement hors-ligne.
-const CACHE = "dekrou-v2";
+const CACHE = "dekrou-v4";
 const ASSETS = ["./", "index.html", "app.js", "styles.css", "manifest.webmanifest", "icon.svg"];
 
 self.addEventListener("install", (e) => {
@@ -14,7 +13,7 @@ self.addEventListener("activate", (e) => {
   );
 });
 
-// Réseau d'abord (pour recevoir les mises à jour), cache en secours hors-ligne.
+// Réseau d'abord, cache hors-ligne
 self.addEventListener("fetch", (e) => {
   const req = e.request;
   if (req.method !== "GET" || new URL(req.url).origin !== location.origin) return;
