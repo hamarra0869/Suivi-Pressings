@@ -2,62 +2,42 @@
 <html lang="fr" class="dark">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>DEKROU PRESSING — Gestion & Reçus WhatsApp</title>
-  
+  <meta name="description" content="Gestion des dépôts de pressing et envoi de reçus WhatsApp.">
+
   <meta name="theme-color" content="#0284c7">
   <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  
-  <!-- Manifest PWA Intégré -->
-  <link rel="manifest" href='data:application/manifest+json,{"name":"DEKROU PRESSING","short_name":"DEKROU","start_url":".","display":"standalone","background_color":"#0284c7","theme_color":"#0284c7","icons":[{"src":"https://fav.farm/🧺","sizes":"512x512","type":"image/png"}]}'>
+  <meta name="apple-mobile-web-app-title" content="DEKROU">
 
-  <!-- Tailwind CSS CDN -->
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script>
-    tailwind.config = {
-      darkMode: 'class',
-      theme: {
-        extend: {
-          colors: {
-            brand: {
-              500: '#0284c7',
-              600: '#0369a1',
-              700: '#075985',
-            }
-          }
-        }
-      }
-    }
-  </script>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="icon.svg">
 
-  <style>
-    ::-webkit-scrollbar { width: 4px; }
-    ::-webkit-scrollbar-track { background: #0f172a; }
-    ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
-  </style>
+  <!-- CSS Tailwind précompilé (voir README) : plus de CDN, fonctionne hors-ligne -->
+  <link rel="stylesheet" href="styles.css">
 </head>
-<body class="bg-slate-950 text-slate-100 min-h-screen font-sans antialiased pb-20 select-none">
+<body class="bg-slate-950 text-slate-100 min-h-screen font-sans antialiased pb-20">
 
   <!-- Bannière d'Installation PWA -->
   <div id="pwaBanner" class="hidden bg-sky-600 text-white px-4 py-2.5 flex justify-between items-center text-xs font-semibold shadow-md sticky top-0 z-40">
     <span class="flex items-center gap-2">📱 Installer l'application sur l'écran d'accueil</span>
-    <button onclick="installPWA()" class="bg-white text-sky-700 px-3 py-1 rounded-lg font-bold text-[11px] shadow hover:bg-slate-100 transition">Installer</button>
+    <button type="button" data-action="install" class="bg-white text-sky-700 px-3 py-1 rounded-lg font-bold text-[11px] shadow hover:bg-slate-100 transition">Installer</button>
   </div>
 
-  <!-- Notification Banner Toast -->
-  <div id="toastNotification" class="fixed bottom-5 left-1/2 -translate-x-1/2 z-50 bg-slate-900 border border-slate-700 text-white px-4 py-2.5 rounded-xl shadow-2xl text-xs font-semibold flex items-center gap-2 transition-all duration-300 opacity-0 pointer-events-none transform translate-y-4">
+  <!-- Notification Toast -->
+  <div id="toastNotification" role="status" aria-live="polite" class="fixed bottom-5 left-1/2 -translate-x-1/2 z-50 bg-slate-900 border border-slate-700 text-white px-4 py-2.5 rounded-xl shadow-2xl text-xs font-semibold flex items-center gap-2 transition-all duration-300 opacity-0 pointer-events-none translate-y-4">
     <span id="toastIcon">✨</span>
-    <span id="toastMessage">Message de notification</span>
+    <span id="toastMessage"></span>
   </div>
 
   <!-- Header App -->
   <header class="bg-slate-900/90 border-b border-slate-800 sticky top-0 z-30 backdrop-blur">
     <div class="max-w-xl mx-auto px-4 py-3 flex items-center justify-between">
       <div class="flex items-center gap-3">
-        <div class="w-10 h-10 bg-sky-500/20 border border-sky-500/40 rounded-xl flex items-center justify-center text-xl shadow-lg">
-          🧺
-        </div>
+        <div class="w-10 h-10 bg-sky-500/20 border border-sky-500/40 rounded-xl flex items-center justify-center text-xl shadow-lg" aria-hidden="true">🧺</div>
         <div>
           <h1 class="font-black text-base text-white tracking-tight flex items-center gap-2">
             DEKROU <span class="text-sky-400">PRESSING</span>
@@ -66,107 +46,110 @@
         </div>
       </div>
 
-      <button onclick="openFeedbackModal()" class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs px-3 py-1.5 rounded-xl font-bold text-sky-400 transition flex items-center gap-1">
+      <button type="button" data-action="open-feedback" class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs px-3 py-1.5 rounded-xl font-bold text-sky-400 transition flex items-center gap-1">
         💡 Vos retours
       </button>
     </div>
   </header>
 
-  <!-- Content Container -->
   <main class="max-w-xl mx-auto px-4 pt-4 space-y-5">
 
     <!-- Formulaire d'Enregistrement de Dépôt -->
-    <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 space-y-4 shadow-xl">
+    <form id="depositForm" novalidate class="bg-slate-900 border border-slate-800 rounded-2xl p-4 space-y-4 shadow-xl">
       <div class="flex justify-between items-center border-b border-slate-800 pb-2">
-        <h2 class="font-bold text-sm text-white flex items-center gap-2">
-          <span>✨ Nouveau Dépôt Client</span>
-        </h2>
-        <span id="ticketNumberDisplay" class="text-xs font-mono font-bold text-sky-400 bg-sky-500/10 border border-sky-500/20 px-2 py-0.5 rounded-lg">
-          TICK-#----
-        </span>
+        <h2 class="font-bold text-sm text-white">✨ Nouveau Dépôt Client</h2>
+        <span id="ticketNumberDisplay" class="text-xs font-mono font-bold text-sky-400 bg-sky-500/10 border border-sky-500/20 px-2 py-0.5 rounded-lg">TICK-----</span>
       </div>
 
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <!-- Nom Client -->
         <div>
-          <label class="block text-xs font-semibold text-slate-300 mb-1">Nom du Client</label>
-          <input type="text" id="clientName" placeholder="Ex: M. Kouassi" 
-            class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-sky-500 transition">
+          <label for="clientName" class="block text-xs font-semibold text-slate-300 mb-1">Nom du Client</label>
+          <input type="text" id="clientName" placeholder="Ex: M. Kouassi" autocomplete="off" maxlength="80"
+            class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-sky-500 transition">
         </div>
 
-        <!-- Téléphone WhatsApp avec préfixe +225 -->
         <div>
-          <label class="block text-xs font-semibold text-slate-300 mb-1">Téléphone Client (WhatsApp)</label>
-          <input type="tel" id="clientPhone" value="+225 " 
-            class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2.5 text-xs font-mono font-bold text-sky-400 focus:outline-none focus:border-sky-500 transition">
+          <label for="clientPhone" class="block text-xs font-semibold text-slate-300 mb-1">Téléphone Client (WhatsApp)</label>
+          <div class="flex items-stretch bg-slate-950 border border-slate-700 rounded-xl focus-within:border-sky-500 transition overflow-hidden">
+            <span class="px-3 flex items-center text-sm font-mono font-bold text-slate-400 border-r border-slate-800 select-none">+225</span>
+            <input type="tel" id="clientPhone" inputmode="numeric" autocomplete="off" placeholder="07 00 00 00 00" maxlength="20"
+              class="w-full bg-transparent px-3 py-2.5 text-sm font-mono font-bold text-sky-400 focus:outline-none">
+          </div>
         </div>
       </div>
 
-      <!-- Détails des Vêtements -->
       <div>
-        <label class="block text-xs font-semibold text-slate-300 mb-1">Articles Dépôt (Type & Nombre)</label>
-        <textarea id="itemsDescription" rows="2" placeholder="Ex: 3 Chemises, 2 Pantalons costume" 
-          class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-sky-500 transition"></textarea>
+        <label for="itemsDescription" class="block text-xs font-semibold text-slate-300 mb-1">Articles Dépôt (Type & Nombre)</label>
+        <textarea id="itemsDescription" rows="2" placeholder="Ex: 3 Chemises, 2 Pantalons costume" maxlength="500"
+          class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-sky-500 transition"></textarea>
       </div>
 
-      <!-- Tarification & Avance -->
       <div class="grid grid-cols-2 gap-3">
         <div>
-          <label class="block text-xs font-semibold text-slate-300 mb-1">Montant Total (FCFA)</label>
-          <input type="number" id="totalAmount" placeholder="0" oninput="calculateBalance()" 
-            class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2.5 text-xs font-mono font-bold text-emerald-400 focus:outline-none focus:border-sky-500 transition">
+          <label for="totalAmount" class="block text-xs font-semibold text-slate-300 mb-1">Montant Total (FCFA)</label>
+          <input type="number" id="totalAmount" placeholder="0" min="0" step="1" inputmode="numeric"
+            class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2.5 text-sm font-mono font-bold text-emerald-400 focus:outline-none focus:border-sky-500 transition">
         </div>
-
         <div>
-          <label class="block text-xs font-semibold text-slate-300 mb-1">Avance Payée (FCFA)</label>
-          <input type="number" id="advanceAmount" placeholder="0" oninput="calculateBalance()" 
-            class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2.5 text-xs font-mono font-bold text-sky-400 focus:outline-none focus:border-sky-500 transition">
+          <label for="advanceAmount" class="block text-xs font-semibold text-slate-300 mb-1">Avance Payée (FCFA)</label>
+          <input type="number" id="advanceAmount" placeholder="0" min="0" step="1" inputmode="numeric"
+            class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2.5 text-sm font-mono font-bold text-sky-400 focus:outline-none focus:border-sky-500 transition">
         </div>
       </div>
 
-      <!-- Reste à Payer & Date Retrait -->
       <div class="grid grid-cols-2 gap-3 pt-1">
         <div class="bg-slate-950 border border-slate-800 p-2.5 rounded-xl">
           <span class="block text-[10px] text-slate-400 font-semibold">Reste à Payer :</span>
           <span id="balanceDisplay" class="text-sm font-black text-rose-400 font-mono">0 FCFA</span>
         </div>
-
         <div>
-          <label class="block text-xs font-semibold text-slate-300 mb-1">Date Retrait Prévue</label>
-          <input type="date" id="pickupDate" 
-            class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-sky-500 transition">
+          <label for="pickupDate" class="block text-xs font-semibold text-slate-300 mb-1">Date Retrait Prévue</label>
+          <input type="date" id="pickupDate"
+            class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-sky-500 transition">
         </div>
       </div>
 
-      <!-- Boutons Enregistrement -->
-      <button onclick="saveAndSendReceipt()" 
-        class="w-full bg-emerald-600 hover:bg-emerald-500 active:scale-[0.98] text-white font-bold py-3 rounded-xl text-xs transition shadow-lg shadow-emerald-600/20 flex items-center justify-center gap-2">
-        <span>💬 Enregistrer & Envoyer Reçu WhatsApp</span>
+      <button type="submit"
+        class="w-full bg-emerald-600 hover:bg-emerald-500 active:scale-[0.98] text-white font-bold py-3 rounded-xl text-sm transition shadow-lg shadow-emerald-600/20 flex items-center justify-center gap-2">
+        💬 Enregistrer & Envoyer Reçu WhatsApp
       </button>
-    </div>
+    </form>
 
     <!-- Liste des Dépôts En Cours -->
-    <div class="space-y-3">
+    <section class="space-y-3">
       <div class="flex justify-between items-center px-1">
         <h3 class="font-bold text-sm text-white">📋 Dépôts en Cours</h3>
-        <span id="depositCount" class="text-xs text-slate-400">0 Fiche(s)</span>
+        <span id="depositCount" class="text-xs text-slate-400">0 fiche</span>
       </div>
 
-      <div id="depositsContainer" class="space-y-3">
-        <!-- Cartes générées dynamiquement -->
+      <div id="statsBar" class="hidden grid grid-cols-2 gap-2 text-[11px]">
+        <div class="bg-slate-900 border border-slate-800 rounded-xl px-3 py-2">
+          <span class="text-slate-400">Reste à encaisser</span>
+          <strong id="statBalance" class="block font-mono text-amber-400 text-sm">0 FCFA</strong>
+        </div>
+        <div class="bg-slate-900 border border-slate-800 rounded-xl px-3 py-2">
+          <span class="text-slate-400">Retraits en retard</span>
+          <strong id="statLate" class="block font-mono text-rose-400 text-sm">0</strong>
+        </div>
       </div>
-    </div>
+
+      <label for="searchInput" class="sr-only">Rechercher un dépôt</label>
+      <input type="search" id="searchInput" placeholder="🔍 Rechercher (nom, ticket, téléphone, article)…" autocomplete="off"
+        class="hidden w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-sky-500 transition">
+
+      <div id="depositsContainer" class="space-y-3"></div>
+    </section>
 
   </main>
 
-  <!-- MODALE RETOURS & AVIS CLIENT (REMPLACE LA DEMANDE DE PAIEMENT) -->
-  <div id="feedbackModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+  <!-- MODALE RETOURS -->
+  <div id="feedbackModal" role="dialog" aria-modal="true" aria-labelledby="feedbackTitle" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
     <div class="bg-slate-900 border border-slate-800 w-full max-w-sm rounded-2xl p-5 space-y-4 shadow-2xl relative">
-      <button onclick="closeFeedbackModal()" class="absolute top-3 right-3 text-slate-400 hover:text-white font-bold text-sm">✕</button>
-      
+      <button type="button" data-action="close-feedback" aria-label="Fermer" class="absolute top-3 right-3 text-slate-400 hover:text-white font-bold text-sm">✕</button>
+
       <div class="text-center space-y-1">
-        <div class="w-12 h-12 rounded-2xl bg-sky-500/10 border border-sky-500/20 text-sky-400 text-2xl flex items-center justify-center mx-auto mb-1">💬</div>
-        <h3 class="font-black text-base text-white">Vos impressions comptent !</h3>
+        <div class="w-12 h-12 rounded-2xl bg-sky-500/10 border border-sky-500/20 text-sky-400 text-2xl flex items-center justify-center mx-auto mb-1" aria-hidden="true">💬</div>
+        <h3 id="feedbackTitle" class="font-black text-base text-white">Vos impressions comptent !</h3>
         <p class="text-xs text-slate-400">Aidez-nous à améliorer l'application pour votre pressing.</p>
       </div>
 
@@ -175,243 +158,399 @@
         <p class="text-slate-400 text-[11px]">Quelles fonctionnalités aimeriez-vous voir ajouter ? L'application est-elle pratique pour votre quotidien ?</p>
       </div>
 
-      <button onclick="sendFeedbackWhatsApp()" 
+      <button type="button" data-action="send-feedback"
         class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded-xl text-xs transition shadow-lg shadow-emerald-600/20 flex items-center justify-center gap-2">
-        <span>💬 Donner mes impressions sur WhatsApp</span>
+        💬 Donner mes impressions sur WhatsApp
       </button>
 
-      <button onclick="closeFeedbackModal()" class="w-full bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs py-2 rounded-xl font-semibold transition">
+      <button type="button" data-action="close-feedback" class="w-full bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs py-2 rounded-xl font-semibold transition">
         Continuer l'utilisation
       </button>
     </div>
   </div>
 
   <script>
+  (() => {
+    "use strict";
+
+    // Clés de stockage conservées pour rester compatible avec les données existantes
+    const STORAGE_KEY = "vdi_pressing_deposits";
+    const FEEDBACK_KEY = "vdi_pressing_feedback_prompted";
+    const COUNTER_KEY = "vdi_pressing_ticket_counter";
+    const FEEDBACK_AFTER = 3;
+    const PHONE_PREFIX = "225";
+
+    const $ = (id) => document.getElementById(id);
+    const el = {
+      form: $("depositForm"),
+      name: $("clientName"),
+      phone: $("clientPhone"),
+      items: $("itemsDescription"),
+      total: $("totalAmount"),
+      advance: $("advanceAmount"),
+      pickup: $("pickupDate"),
+      balance: $("balanceDisplay"),
+      ticket: $("ticketNumberDisplay"),
+      list: $("depositsContainer"),
+      count: $("depositCount"),
+      search: $("searchInput"),
+      stats: $("statsBar"),
+      statBalance: $("statBalance"),
+      statLate: $("statLate"),
+      modal: $("feedbackModal"),
+      banner: $("pwaBanner"),
+      toast: $("toastNotification"),
+      toastIcon: $("toastIcon"),
+      toastMsg: $("toastMessage"),
+    };
+
+    const fcfa = new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 0 });
+    const fmtMoney = (n) => fcfa.format(n) + " FCFA";
+
     let deposits = [];
-    let currentTicketNum = "";
-    let deferredPrompt;
+    let currentTicket = "";
+    let deferredPrompt = null;
+    let toastTimer = null;
 
-    document.addEventListener("DOMContentLoaded", () => {
-      loadDeposits();
-      generateNewTicketNumber();
-      setDefaultPickupDate();
-      setupPhonePrefixGuard();
-      registerServiceWorker();
-    });
+    // ---------- Utilitaires ----------
+    const escapeHtml = (s) => String(s).replace(/[&<>"']/g, (c) => (
+      { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]
+    ));
 
-    // Gestion de l'installation PWA
-    window.addEventListener('beforeinstallprompt', (e) => {
-      e.preventDefault();
-      deferredPrompt = e;
-      document.getElementById('pwaBanner').classList.remove('hidden');
-    });
+    // Date locale au format AAAA-MM-JJ (évite le décalage UTC de toISOString)
+    const toISODate = (d) =>
+      `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 
-    function installPWA() {
-      if (deferredPrompt) {
-        deferredPrompt.prompt();
-        deferredPrompt.userChoice.then(() => {
-          document.getElementById('pwaBanner').classList.add('hidden');
-          deferredPrompt = null;
-        });
-      }
+    // "2026-11-24" -> "24/11/2026" sans passer par new Date() (qui interprète en UTC)
+    const fmtDate = (iso) => {
+      if (!iso || !/^\d{4}-\d{2}-\d{2}$/.test(iso)) return "—";
+      const [y, m, d] = iso.split("-");
+      return `${d}/${m}/${y}`;
+    };
+
+    const amount = (input) => Math.max(0, Math.round(parseFloat(input.value) || 0));
+    const digitsOnly = (s) => String(s).replace(/\D/g, "");
+
+    // Numéros ivoiriens : 10 chiffres. Accepte aussi une saisie avec 225 / +225 / 00225.
+    function normalizePhone(raw) {
+      let d = digitsOnly(raw);
+      if (d.startsWith("00" + PHONE_PREFIX)) d = d.slice(5);
+      else if (d.length > 10 && d.startsWith(PHONE_PREFIX)) d = d.slice(3);
+      return d.length === 10 ? PHONE_PREFIX + d : null;
     }
 
-    function registerServiceWorker() {
-      if ('serviceWorker' in navigator) {
-        const swCode = `
-          self.addEventListener('install', (e) => self.skipWaiting());
-          self.addEventListener('activate', (e) => self.clients.claim());
-          self.addEventListener('fetch', (e) => e.respondWith(fetch(e.request).catch(() => caches.match(e.request))));
-        `;
-        const blob = new Blob([swCode], { type: 'application/javascript' });
-        navigator.serviceWorker.register(URL.createObjectURL(blob)).catch(() => {});
-      }
-    }
+    const prettyPhone = (full) => {
+      const local = String(full || "").replace(new RegExp("^" + PHONE_PREFIX), "");
+      return local ? "+225 " + local.replace(/(\d{2})(?=\d)/g, "$1 ") : "";
+    };
 
     function showToast(message, icon = "✨") {
-      const toast = document.getElementById("toastNotification");
-      document.getElementById("toastMessage").textContent = message;
-      document.getElementById("toastIcon").textContent = icon;
-      toast.classList.remove("opacity-0", "pointer-events-none", "translate-y-4");
-      setTimeout(() => {
-        toast.classList.add("opacity-0", "pointer-events-none", "translate-y-4");
+      el.toastMsg.textContent = message;
+      el.toastIcon.textContent = icon;
+      el.toast.classList.remove("opacity-0", "pointer-events-none", "translate-y-4");
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => {
+        el.toast.classList.add("opacity-0", "pointer-events-none", "translate-y-4");
       }, 3500);
     }
 
-    function setupPhonePrefixGuard() {
-      const phoneInput = document.getElementById("clientPhone");
-      phoneInput.addEventListener("input", () => {
-        if (!phoneInput.value.startsWith("+225 ")) {
-          phoneInput.value = "+225 ";
-        }
-      });
-    }
-
-    function generateNewTicketNumber() {
-      const rand = Math.floor(1000 + Math.random() * 9000);
-      currentTicketNum = `TICK-${rand}`;
-      document.getElementById("ticketNumberDisplay").textContent = currentTicketNum;
-    }
-
-    function setDefaultPickupDate() {
-      const date = new Date();
-      date.setDate(date.getDate() + 2);
-      document.getElementById("pickupDate").value = date.toISOString().slice(0, 10);
-    }
-
-    function calculateBalance() {
-      const total = parseFloat(document.getElementById("totalAmount").value) || 0;
-      const advance = parseFloat(document.getElementById("advanceAmount").value) || 0;
-      const balance = Math.max(0, total - advance);
-      document.getElementById("balanceDisplay").textContent = balance.toLocaleString('fr-FR') + " FCFA";
+    // ---------- Stockage ----------
+    function persist() {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(deposits));
+        return true;
+      } catch (e) {
+        showToast("Stockage plein ou indisponible : données non sauvegardées.", "⚠️");
+        return false;
+      }
     }
 
     function loadDeposits() {
-      const saved = localStorage.getItem("vdi_pressing_deposits");
-      if (saved) {
-        try { deposits = JSON.parse(saved); } catch(e) { deposits = []; }
+      try {
+        const parsed = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
+        deposits = Array.isArray(parsed) ? parsed : [];
+      } catch (e) {
+        deposits = [];
       }
-      renderDeposits();
     }
 
-    function saveAndSendReceipt() {
-      // Déclencheur du feedback utilisateur au bout de 3 dépôts
-      if (deposits.length === 3 && !localStorage.getItem("vdi_pressing_feedback_prompted")) {
-        localStorage.setItem("vdi_pressing_feedback_prompted", "true");
-        openFeedbackModal();
-        return;
+    // ---------- Ticket séquentiel (plus de collisions aléatoires) ----------
+    function peekNextTicket() {
+      let n = parseInt(localStorage.getItem(COUNTER_KEY), 10);
+      if (!Number.isFinite(n)) {
+        // Reprend après le plus grand numéro existant
+        n = deposits.reduce((max, d) => {
+          const v = parseInt(String(d.ticket || "").replace(/\D/g, ""), 10);
+          return Number.isFinite(v) && v > max ? v : max;
+        }, 1000);
       }
+      return n + 1;
+    }
 
-      const name = document.getElementById("clientName").value.trim();
-      let rawPhone = document.getElementById("clientPhone").value.replace(/\s+/g, '').replace('+', '');
-      const items = document.getElementById("itemsDescription").value.trim();
-      const total = parseFloat(document.getElementById("totalAmount").value) || 0;
-      const advance = parseFloat(document.getElementById("advanceAmount").value) || 0;
-      const pickupDate = document.getElementById("pickupDate").value;
+    function refreshTicket() {
+      currentTicket = `TICK-${peekNextTicket()}`;
+      el.ticket.textContent = currentTicket;
+    }
+
+    function commitTicket() {
+      localStorage.setItem(COUNTER_KEY, currentTicket.replace(/\D/g, ""));
+    }
+
+    // ---------- Formulaire ----------
+    function setDefaultPickupDate() {
+      const d = new Date();
+      d.setDate(d.getDate() + 2);
+      el.pickup.value = toISODate(d);
+      el.pickup.min = toISODate(new Date());
+    }
+
+    function calculateBalance() {
+      const total = amount(el.total);
+      const advance = amount(el.advance);
+      el.balance.textContent = fmtMoney(Math.max(0, total - advance));
+      el.advance.classList.toggle("border-rose-500", advance > total && total > 0);
+    }
+
+    function resetForm() {
+      el.form.reset();
+      el.balance.textContent = fmtMoney(0);
+      el.advance.classList.remove("border-rose-500");
+      setDefaultPickupDate();
+      refreshTicket();
+      el.name.focus();
+    }
+
+    function handleSubmit(e) {
+      e.preventDefault();
+
+      const name = el.name.value.trim();
+      const items = el.items.value.trim();
+      const total = amount(el.total);
+      const advance = amount(el.advance);
+      const pickupDate = el.pickup.value;
+      const phone = normalizePhone(el.phone.value);
 
       if (!name || !items || total <= 0) {
         showToast("Veuillez remplir le nom, les articles et le montant.", "⚠️");
+        (!name ? el.name : !items ? el.items : el.total).focus();
+        return;
+      }
+      if (!phone) {
+        showToast("Numéro WhatsApp invalide (10 chiffres attendus).", "⚠️");
+        el.phone.focus();
+        return;
+      }
+      if (advance > total) {
+        showToast("L'avance ne peut pas dépasser le montant total.", "⚠️");
+        el.advance.focus();
         return;
       }
 
-      const balance = Math.max(0, total - advance);
-
-      const newDeposit = {
-        id: Date.now().toString(),
-        ticket: currentTicketNum,
+      const deposit = {
+        id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+        ticket: currentTicket,
         name,
-        phone: rawPhone,
+        phone,
         items,
         total,
         advance,
-        balance,
+        balance: total - advance,
         pickupDate,
-        createdAt: new Date().toLocaleDateString('fr-FR')
+        createdAt: new Date().toLocaleDateString("fr-FR"),
       };
 
-      deposits.unshift(newDeposit);
-      localStorage.setItem("vdi_pressing_deposits", JSON.stringify(deposits));
+      deposits.unshift(deposit);
+      if (!persist()) {
+        deposits.shift();
+        return;
+      }
+      commitTicket();
 
+      // Ouvert de façon synchrone dans le geste utilisateur (évite le blocage des pop-ups)
+      sendWhatsAppReceipt(deposit);
       renderDeposits();
-      sendWhatsAppReceipt(newDeposit);
       resetForm();
       showToast("Dépôt enregistré avec succès !", "✅");
+
+      // Demande d'avis APRÈS l'enregistrement (avant, le dépôt était perdu)
+      if (deposits.length >= FEEDBACK_AFTER && !localStorage.getItem(FEEDBACK_KEY)) {
+        localStorage.setItem(FEEDBACK_KEY, "true");
+        setTimeout(openFeedbackModal, 800);
+      }
     }
 
+    // ---------- WhatsApp ----------
     function sendWhatsAppReceipt(dep) {
-      const formattedDate = new Date(dep.pickupDate).toLocaleDateString('fr-FR');
-      const msg = encodeURIComponent(
+      const msg =
         `🧺 *REÇU DE DÉPÔT — DEKROU PRESSING*\n` +
         `-----------------------------------\n` +
         `🎫 *Ticket N° :* ${dep.ticket}\n` +
         `👤 *Client :* ${dep.name}\n` +
         `📦 *Articles :* ${dep.items}\n\n` +
-        `💰 *Montant Total :* ${dep.total.toLocaleString('fr-FR')} FCFA\n` +
-        `💵 *Avance Payée :* ${dep.advance.toLocaleString('fr-FR')} FCFA\n` +
-        `🔴 *Reste à Payer :* *${dep.balance.toLocaleString('fr-FR')} FCFA*\n\n` +
-        `📅 *Date de Retrait Prévue :* *${formattedDate}*\n` +
+        `💰 *Montant Total :* ${fmtMoney(dep.total)}\n` +
+        `💵 *Avance Payée :* ${fmtMoney(dep.advance)}\n` +
+        `🔴 *Reste à Payer :* *${fmtMoney(dep.balance)}*\n\n` +
+        `📅 *Date de Retrait Prévue :* *${fmtDate(dep.pickupDate)}*\n` +
         `-----------------------------------\n` +
         `Merci pour votre confiance ! Merci de présenter ce message lors du retrait.\n` +
-        `_Conformément à la loi n° 2013-450, vos coordonnées sont uniquement conservées pour la gestion de votre reçu._`
-      );
+        `_Conformément à la loi n° 2013-450, vos coordonnées sont uniquement conservées pour la gestion de votre reçu._`;
 
-      window.open(`https://wa.me/${dep.phone}?text=${msg}`, '_blank');
+      const phone = digitsOnly(dep.phone);
+      window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`, "_blank", "noopener");
     }
 
-    function resetForm() {
-      document.getElementById("clientName").value = "";
-      document.getElementById("clientPhone").value = "+225 ";
-      document.getElementById("itemsDescription").value = "";
-      document.getElementById("totalAmount").value = "";
-      document.getElementById("advanceAmount").value = "";
-      document.getElementById("balanceDisplay").textContent = "0 FCFA";
-      generateNewTicketNumber();
-      setDefaultPickupDate();
+    // ---------- Liste ----------
+    function depositCard(dep, today) {
+      const paid = dep.balance === 0;
+      const late = dep.pickupDate && dep.pickupDate < today;
+      const id = escapeHtml(dep.id);
+      return `
+        <article class="bg-slate-900 border ${late ? "border-rose-500/40" : "border-slate-800"} rounded-2xl p-4 space-y-3 shadow-lg">
+          <div class="flex justify-between items-start gap-2 border-b border-slate-800 pb-2">
+            <div class="min-w-0">
+              <span class="font-mono font-bold text-sky-400 text-xs">${escapeHtml(dep.ticket)}</span>
+              <h4 class="font-bold text-sm text-white break-words">${escapeHtml(dep.name)}</h4>
+              ${dep.phone ? `<span class="font-mono text-[11px] text-slate-500">${escapeHtml(prettyPhone(dep.phone))}</span>` : ""}
+            </div>
+            <span class="shrink-0 text-[10px] font-bold px-2 py-0.5 rounded-full border ${paid
+              ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/30"
+              : "bg-amber-500/10 text-amber-400 border-amber-500/30"}">
+              ${paid ? "SOLDÉ" : "RESTE : " + fmtMoney(dep.balance)}
+            </span>
+          </div>
+
+          <p class="text-xs text-slate-300 bg-slate-950 p-2 rounded-xl border border-slate-800/80 whitespace-pre-line break-words">${escapeHtml(dep.items)}</p>
+
+          <div class="flex justify-between items-center gap-2 text-[11px] text-slate-400 pt-1">
+            <span>Retrait : <strong class="${late ? "text-rose-400" : "text-slate-200"}">${fmtDate(dep.pickupDate)}${late ? " ⏰" : ""}</strong></span>
+            <div class="flex gap-2">
+              ${paid ? "" : `<button type="button" data-action="settle" data-id="${id}" class="bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 px-2.5 py-1 rounded-lg text-[10px] font-bold">💵 Solder</button>`}
+              <button type="button" data-action="resend" data-id="${id}" class="bg-slate-800 hover:bg-slate-700 text-sky-400 border border-slate-700 px-2.5 py-1 rounded-lg text-[10px] font-bold">💬 Reçu</button>
+              <button type="button" data-action="delete" data-id="${id}" aria-label="Supprimer la fiche" class="bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30 px-2.5 py-1 rounded-lg text-[10px] font-bold">🗑️</button>
+            </div>
+          </div>
+        </article>`;
     }
 
     function renderDeposits() {
-      const container = document.getElementById("depositsContainer");
-      document.getElementById("depositCount").textContent = `${deposits.length} Fiche(s)`;
-      container.innerHTML = "";
+      const today = toISODate(new Date());
+      const q = el.search.value.trim().toLowerCase();
+      const qDigits = digitsOnly(q);
 
-      if (deposits.length === 0) {
-        container.innerHTML = `<div class="text-center py-8 text-slate-500 text-xs">Aucun dépôt enregistré.</div>`;
-        return;
-      }
+      const visible = !q ? deposits : deposits.filter((d) =>
+        `${d.ticket} ${d.name} ${d.items}`.toLowerCase().includes(q) ||
+        (qDigits.length >= 2 && String(d.phone || "").includes(qDigits))
+      );
 
-      deposits.forEach(dep => {
-        container.innerHTML += `
-          <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 space-y-3 shadow-lg">
-            <div class="flex justify-between items-start border-b border-slate-800 pb-2">
-              <div>
-                <span class="font-mono font-bold text-sky-400 text-xs">${dep.ticket}</span>
-                <h4 class="font-bold text-sm text-white">${dep.name}</h4>
-              </div>
-              <span class="text-[10px] font-bold px-2 py-0.5 rounded-full border ${dep.balance === 0 ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' : 'bg-amber-500/10 text-amber-400 border-amber-500/30'}">
-                ${dep.balance === 0 ? 'SOLDE' : 'RESTE : ' + dep.balance.toLocaleString('fr-FR') + ' FCFA'}
-              </span>
-            </div>
+      const n = deposits.length;
+      el.count.textContent = `${n} fiche${n > 1 ? "s" : ""}`;
+      el.search.classList.toggle("hidden", n < 4);
+      el.stats.classList.toggle("hidden", n === 0);
+      el.statBalance.textContent = fmtMoney(deposits.reduce((s, d) => s + (d.balance || 0), 0));
+      el.statLate.textContent = deposits.filter((d) => d.pickupDate && d.pickupDate < today).length;
 
-            <p class="text-xs text-slate-300 bg-slate-950 p-2 rounded-xl border border-slate-800/80">${dep.items}</p>
-
-            <div class="flex justify-between items-center text-[11px] text-slate-400 pt-1">
-              <span>Retrait : <strong class="text-slate-200">${new Date(dep.pickupDate).toLocaleDateString('fr-FR')}</strong></span>
-              <div class="flex gap-2">
-                <button onclick="reSendReceipt('${dep.id}')" class="bg-slate-800 hover:bg-slate-700 text-sky-400 border border-slate-700 px-2.5 py-1 rounded-lg text-[10px] font-bold">
-                  💬 Reçu
-                </button>
-                <button onclick="deleteDeposit('${dep.id}')" class="bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30 px-2.5 py-1 rounded-lg text-[10px] font-bold">
-                  🗑️
-                </button>
-              </div>
-            </div>
-          </div>
-        `;
-      });
+      // Une seule écriture DOM (l'ancien `innerHTML +=` en boucle était en O(n²))
+      el.list.innerHTML = visible.length
+        ? visible.map((d) => depositCard(d, today)).join("")
+        : `<div class="text-center py-8 text-slate-500 text-xs">${n ? "Aucun résultat." : "Aucun dépôt enregistré."}</div>`;
     }
 
-    function reSendReceipt(id) {
-      const dep = deposits.find(d => d.id === id);
-      if (dep) sendWhatsAppReceipt(dep);
+    function findDeposit(id) {
+      return deposits.find((d) => d.id === id);
+    }
+
+    function settleDeposit(id) {
+      const dep = findDeposit(id);
+      if (!dep || !confirm(`Confirmer l'encaissement de ${fmtMoney(dep.balance)} pour ${dep.name} ?`)) return;
+      dep.advance = dep.total;
+      dep.balance = 0;
+      persist();
+      renderDeposits();
+      showToast("Paiement soldé.", "💵");
     }
 
     function deleteDeposit(id) {
-      deposits = deposits.filter(d => d.id !== id);
-      localStorage.setItem("vdi_pressing_deposits", JSON.stringify(deposits));
+      const dep = findDeposit(id);
+      if (!dep || !confirm(`Supprimer la fiche ${dep.ticket} (${dep.name}) ?`)) return;
+      deposits = deposits.filter((d) => d.id !== id);
+      persist();
       renderDeposits();
       showToast("Fiche supprimée.", "🗑️");
     }
 
-    function openFeedbackModal() { document.getElementById("feedbackModal").classList.remove("hidden"); }
-    function closeFeedbackModal() { document.getElementById("feedbackModal").classList.add("hidden"); }
+    // ---------- Modale retours ----------
+    function openFeedbackModal() { el.modal.classList.remove("hidden"); }
+    function closeFeedbackModal() { el.modal.classList.add("hidden"); }
 
     function sendFeedbackWhatsApp() {
-      const msg = encodeURIComponent(
-        `👋 Bonjour,\n\nVoici mes impressions et suggestions pour l'amélioration de l'application *DEKROU PRESSING* :\n\n- `
-      );
-      window.open(`https://wa.me/?text=${msg}`, '_blank');
+      const msg = `👋 Bonjour,\n\nVoici mes impressions et suggestions pour l'amélioration de l'application *DEKROU PRESSING* :\n\n- `;
+      window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, "_blank", "noopener");
       closeFeedbackModal();
     }
+
+    // ---------- PWA ----------
+    window.addEventListener("beforeinstallprompt", (e) => {
+      e.preventDefault();
+      deferredPrompt = e;
+      el.banner.classList.remove("hidden");
+    });
+
+    window.addEventListener("appinstalled", () => el.banner.classList.add("hidden"));
+
+    async function installPWA() {
+      if (!deferredPrompt) return;
+      deferredPrompt.prompt();
+      await deferredPrompt.userChoice;
+      deferredPrompt = null;
+      el.banner.classList.add("hidden");
+    }
+
+    function registerServiceWorker() {
+      // Un service worker doit être un vrai fichier servi en HTTPS (les URL blob: sont refusées)
+      if ("serviceWorker" in navigator && location.protocol.startsWith("http")) {
+        navigator.serviceWorker.register("sw.js").catch(() => {});
+      }
+    }
+
+    // ---------- Événements (délégation, plus de onclick inline) ----------
+    const actions = {
+      "install": installPWA,
+      "open-feedback": openFeedbackModal,
+      "close-feedback": closeFeedbackModal,
+      "send-feedback": sendFeedbackWhatsApp,
+      "resend": (id) => { const d = findDeposit(id); if (d) sendWhatsAppReceipt(d); },
+      "settle": settleDeposit,
+      "delete": deleteDeposit,
+    };
+
+    document.addEventListener("click", (e) => {
+      const btn = e.target.closest("[data-action]");
+      if (btn && actions[btn.dataset.action]) actions[btn.dataset.action](btn.dataset.id);
+      else if (e.target === el.modal) closeFeedbackModal();
+    });
+
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && !el.modal.classList.contains("hidden")) closeFeedbackModal();
+    });
+
+    el.form.addEventListener("submit", handleSubmit);
+    el.total.addEventListener("input", calculateBalance);
+    el.advance.addEventListener("input", calculateBalance);
+    el.search.addEventListener("input", renderDeposits);
+
+    // Synchronise plusieurs onglets ouverts
+    window.addEventListener("storage", (e) => {
+      if (e.key === STORAGE_KEY) { loadDeposits(); renderDeposits(); }
+      if (e.key === COUNTER_KEY) refreshTicket();
+    });
+
+    // ---------- Démarrage ----------
+    loadDeposits();
+    renderDeposits();
+    refreshTicket();
+    setDefaultPickupDate();
+    registerServiceWorker();
+  })();
   </script>
 </body>
 </html>
