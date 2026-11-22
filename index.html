@@ -58,6 +58,12 @@
 
   <main class="max-w-xl mx-auto px-4 pt-4 space-y-5">
 
+    <!-- Rappel de sauvegarde -->
+    <div id="backupBanner" class="hidden bg-rose-500/10 border border-rose-500/30 rounded-xl px-3 py-2 flex items-center justify-between gap-3">
+      <span id="backupText" class="text-xs text-rose-200 font-semibold">Pensez à sauvegarder vos fiches.</span>
+      <button type="button" data-action="export" class="shrink-0 bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold px-3 py-1.5 rounded-lg">💾 Sauvegarder</button>
+    </div>
+
     <!-- Bandeau version d'essai -->
     <button type="button" id="trialBanner" data-action="open-licence" class="hidden w-full text-left bg-amber-500/10 border border-amber-500/30 text-amber-300 rounded-xl px-3 py-2 text-xs font-semibold">
       <span id="trialText">Version d'essai</span> — <span class="underline">Passer en PRO</span>
@@ -180,12 +186,12 @@
 
       <div class="border-t border-slate-800 pt-3 space-y-2">
         <h4 class="text-xs font-bold text-white">💾 Sauvegarde des données</h4>
-        <p class="text-[11px] text-slate-400">Les fiches restent uniquement sur ce téléphone. Faites une sauvegarde régulièrement (ou avant de changer de téléphone).</p>
+        <p class="text-[11px] text-slate-400">Les fiches restent uniquement sur ce téléphone. « Sauvegarder » vous permet d'envoyer une copie dans WhatsApp (à vous-même), Google Drive ou Gmail. L'application vous le rappelle automatiquement.</p>
         <div class="grid grid-cols-2 gap-2">
           <button type="button" data-action="export" class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 text-xs py-2 rounded-lg font-semibold">⬇️ Sauvegarder</button>
           <button type="button" data-action="import" class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 text-xs py-2 rounded-lg font-semibold">⬆️ Restaurer</button>
         </div>
-        <input type="file" id="importFile" accept="application/json,.json" class="hidden">
+        <input type="file" id="importFile" accept="application/json,.json,text/plain,.txt" class="hidden">
       </div>
 
       <div class="border-t border-slate-800 pt-3">

@@ -9,6 +9,11 @@
   const DEVICE_KEY = "dekrou_device_id";
   const LICENCE_KEY = "dekrou_licence";
   const CREATED_KEY = "dekrou_created_count";
+  const BACKUP_DATE_KEY = "dekrou_last_backup";
+  const BACKUP_CHANGES_KEY = "dekrou_changes_since_backup";
+  // Rappel de sauvegarde : après ce nombre de jours ou de modifications
+  const BACKUP_EVERY_DAYS = 7;
+  const BACKUP_EVERY_CHANGES = 15;
   const FEEDBACK_AFTER = 3;
   const PHONE_PREFIX = "225";
   const APP_NAME = "DEKROU PRESSING";
@@ -55,6 +60,8 @@
     deviceIdDisplay: $("deviceIdDisplay"),
     trialBanner: $("trialBanner"),
     trialText: $("trialText"),
+    backupBanner: $("backupBanner"),
+    backupText: $("backupText"),
     banner: $("pwaBanner"),
     toast: $("toastNotification"),
     toastIcon: $("toastIcon"),
@@ -117,6 +124,8 @@
   function persist() {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(deposits));
+      localStorage.setItem(BACKUP_CHANGES_KEY, String((parseInt(localStorage.getItem(BACKUP_CHANGES_KEY), 10) || 0) + 1));
+      refreshBackupBanner();
       return true;
     } catch (e) {
       showToast("Stockage plein ou indisponible : données non sauvegardées.", "⚠️");
@@ -252,8 +261,8 @@
   }
 
   // ---------- Sauvegarde / restauration ----------
-  function exportData() {
-    const data = {
+  function buildBackup() {
+    return {
       app: "dekrou-pressing",
       version: 1,
       exportedAt: new Date().toISOString(),
@@ -264,15 +273,69 @@
       ticketCounter: localStorage.getItem(COUNTER_KEY) || "",
       createdCount: createdCount(),
     };
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+  }
+
+  function markBackedUp() {
+    localStorage.setItem(BACKUP_DATE_KEY, new Date().toISOString());
+    localStorage.setItem(BACKUP_CHANGES_KEY, "0");
+    refreshBackupBanner();
+  }
+
+  // Sauvegarde en un geste : sur téléphone, ouvre le menu de partage
+  // (WhatsApp « Moi », Google Drive, Gmail…) ; sinon télécharge le fichier.
+  async function exportData() {
+    const json = JSON.stringify(buildBackup(), null, 2);
+    const base = `sauvegarde-${(settings.name || "pressing").replace(/[^\p{L}\p{N}]+/gu, "-").toLowerCase()}-${toISODate(new Date())}`;
+
+    if (navigator.canShare) {
+      // Certains téléphones refusent le type JSON : on essaie aussi en .txt
+      const candidates = [
+        new File([json], base + ".json", { type: "application/json" }),
+        new File([json], base + ".txt", { type: "text/plain" }),
+      ];
+      const file = candidates.find((f) => navigator.canShare({ files: [f] }));
+      if (file) {
+        try {
+          await navigator.share({
+            files: [file],
+            title: "Sauvegarde pressing",
+            text: "Sauvegarde de mes fiches (à garder, ne pas supprimer).",
+          });
+          markBackedUp();
+          showToast("Sauvegarde envoyée. Gardez-la précieusement.", "💾");
+          return;
+        } catch (e) {
+          if (e && e.name === "AbortError") return; // partage annulé
+        }
+      }
+    }
+
     const a = document.createElement("a");
-    a.href = URL.createObjectURL(blob);
-    a.download = `sauvegarde-pressing-${toISODate(new Date())}.json`;
+    a.href = URL.createObjectURL(new Blob([json], { type: "application/json" }));
+    a.download = base + ".json";
     document.body.appendChild(a);
     a.click();
     a.remove();
     setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+    markBackedUp();
     showToast("Sauvegarde téléchargée.", "💾");
+  }
+
+  function refreshBackupBanner() {
+    if (!el.backupBanner) return;
+    const last = localStorage.getItem(BACKUP_DATE_KEY);
+    const changes = parseInt(localStorage.getItem(BACKUP_CHANGES_KEY), 10) || 0;
+    const days = last ? Math.floor((Date.now() - new Date(last).getTime()) / 86400000) : null;
+    const due = deposits.length > 0 && (
+      changes >= BACKUP_EVERY_CHANGES ||
+      (days === null ? changes >= 3 : days >= BACKUP_EVERY_DAYS && changes > 0)
+    );
+    el.backupBanner.classList.toggle("hidden", !due);
+    if (due) {
+      el.backupText.textContent = days === null
+        ? "Aucune sauvegarde : si vous perdez ce téléphone, vous perdez vos fiches."
+        : `Dernière sauvegarde il y a ${days} jour${days > 1 ? "s" : ""} (${changes} modification${changes > 1 ? "s" : ""} depuis).`;
+    }
   }
 
   const isValidDeposit = (d) =>
@@ -293,6 +356,7 @@
         id: d.id, ticket: String(d.ticket || ""), name: d.name, phone: String(d.phone || "").replace(/\D/g, ""),
         items: d.items, total: Math.max(0, d.total), advance: Math.max(0, Number(d.advance) || 0),
         balance: Math.max(0, d.balance), pickupDate: String(d.pickupDate || ""), createdAt: String(d.createdAt || ""),
+        ...(/^\d{4}-\d{2}-\d{2}$/.test(d.readyAt || "") ? { readyAt: d.readyAt } : {}),
       }));
       if (!confirm(`Restaurer ${clean.length} fiche(s) ? Les fiches actuelles de ce téléphone seront remplacées.`)) return;
 
@@ -310,6 +374,7 @@
       const restoredCount = Math.max(createdCount(), parseInt(data.createdCount, 10) || 0, clean.length);
       localStorage.setItem(CREATED_KEY, String(restoredCount));
 
+      markBackedUp();
       loadSettings();
       await checkLicence();
       refreshTicket();
@@ -461,6 +526,36 @@
     window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`, "_blank", "noopener");
   }
 
+  // Prévient le client que son linge est prêt (et rappelle le reste à payer)
+  function sendReadyMessage(id) {
+    const dep = findDeposit(id);
+    if (!dep) return;
+    const first = !dep.readyAt;
+    const shop = settings.name || APP_NAME;
+    const msg =
+      `👋 Bonjour ${dep.name},\n\n` +
+      (first
+        ? `✅ *Votre linge est prêt* chez *${shop}* !\n\n`
+        : `🔔 *Rappel* : votre linge vous attend chez *${shop}* depuis le ${fmtDate(dep.readyAt)}.\n\n`) +
+      `🎫 *Ticket N° :* ${dep.ticket}\n` +
+      `📦 *Articles :* ${dep.items}\n` +
+      (dep.balance > 0
+        ? `🔴 *Reste à payer au retrait :* *${fmtMoney(dep.balance)}*\n`
+        : `🟢 *Déjà réglé* — rien à payer.\n`) +
+      (settings.address ? `\n📍 ${settings.address}\n` : "") +
+      (settings.phone ? `📞 ${settings.phone}\n` : "") +
+      `\nMerci de présenter votre ticket lors du retrait. À bientôt !\n` +
+      `_Message envoyé avec ${APP_NAME}_`;
+
+    window.open(`https://wa.me/${digitsOnly(dep.phone)}?text=${encodeURIComponent(msg)}`, "_blank", "noopener");
+    if (first) {
+      dep.readyAt = toISODate(new Date());
+      persist();
+      renderDeposits();
+    }
+    showToast(first ? "Client prévenu : linge prêt." : "Rappel envoyé.", "🔔");
+  }
+
   // ---------- Liste ----------
   function depositCard(dep, today) {
     const paid = dep.balance === 0;
@@ -471,6 +566,7 @@
         <div class="flex justify-between items-start gap-2 border-b border-slate-800 pb-2">
           <div class="min-w-0">
             <span class="font-mono font-bold text-sky-400 text-xs">${escapeHtml(dep.ticket)}</span>
+            ${dep.readyAt ? `<span class="ml-1 text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-sky-500/10 text-sky-300 border border-sky-500/30">PRÊT le ${fmtDate(dep.readyAt).slice(0, 5)}</span>` : ""}
             <h4 class="font-bold text-sm text-white break-words">${escapeHtml(dep.name)}</h4>
             ${dep.phone ? `<span class="font-mono text-[11px] text-slate-500">${escapeHtml(prettyPhone(dep.phone))}</span>` : ""}
           </div>
@@ -483,9 +579,12 @@
 
         <p class="text-xs text-slate-300 bg-slate-950 p-2 rounded-xl border border-slate-800/80 whitespace-pre-line break-words">${escapeHtml(dep.items)}</p>
 
-        <div class="flex justify-between items-center gap-2 text-[11px] text-slate-400 pt-1">
+        <div class="flex flex-wrap justify-between items-center gap-2 text-[11px] text-slate-400 pt-1">
           <span>Retrait : <strong class="${late ? "text-rose-400" : "text-slate-200"}">${fmtDate(dep.pickupDate)}${late ? " ⏰" : ""}</strong></span>
-          <div class="flex gap-2">
+          <div class="flex flex-wrap justify-end gap-2">
+            <button type="button" data-action="ready" data-id="${id}" class="${dep.readyAt
+              ? "bg-slate-800 hover:bg-slate-700 text-sky-300 border-slate-700"
+              : "bg-sky-600 hover:bg-sky-500 text-white border-sky-500"} border px-2.5 py-1 rounded-lg text-[10px] font-bold">${dep.readyAt ? "🔔 Relancer" : "🔔 Prêt"}</button>
             ${paid ? "" : `<button type="button" data-action="settle" data-id="${id}" class="bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 px-2.5 py-1 rounded-lg text-[10px] font-bold">💵 Solder</button>`}
             <button type="button" data-action="resend" data-id="${id}" class="bg-slate-800 hover:bg-slate-700 text-sky-400 border border-slate-700 px-2.5 py-1 rounded-lg text-[10px] font-bold">💬 Reçu</button>
             <button type="button" data-action="delete" data-id="${id}" aria-label="Supprimer la fiche" class="bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30 px-2.5 py-1 rounded-lg text-[10px] font-bold">🗑️</button>
@@ -593,6 +692,7 @@
     "send-feedback": sendFeedbackWhatsApp,
     "resend": (id) => { const d = findDeposit(id); if (d) sendWhatsAppReceipt(d); },
     "settle": settleDeposit,
+    "ready": sendReadyMessage,
     "delete": deleteDeposit,
   };
 
@@ -628,6 +728,9 @@
   if (localStorage.getItem(CREATED_KEY) === null) localStorage.setItem(CREATED_KEY, String(deposits.length));
   renderDeposits();
   checkLicence();
+  refreshBackupBanner();
+  // Demande au navigateur de ne pas effacer les données en cas de manque de place
+  if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
   if (!settings.name) setTimeout(openSettings, 400);
   refreshTicket();
   setDefaultPickupDate();

@@ -1,5 +1,5 @@
 // Service worker : l'application fonctionne entièrement hors-ligne.
-const CACHE = "dekrou-v2";
+const CACHE = "dekrou-v3";
 const ASSETS = ["./", "index.html", "app.js", "styles.css", "manifest.webmanifest", "icon.svg"];
 
 self.addEventListener("install", (e) => {
