@@ -1,7 +1,6 @@
 (() => {
   "use strict";
 
-  // Clés de stockage conservées pour rester compatible avec les données existantes
   const STORAGE_KEY = "vdi_pressing_deposits";
   const FEEDBACK_KEY = "vdi_pressing_feedback_prompted";
   const COUNTER_KEY = "vdi_pressing_ticket_counter";
@@ -11,19 +10,15 @@
   const CREATED_KEY = "dekrou_created_count";
   const BACKUP_DATE_KEY = "dekrou_last_backup";
   const BACKUP_CHANGES_KEY = "dekrou_changes_since_backup";
-  // Rappel de sauvegarde : après ce nombre de jours ou de modifications
   const BACKUP_EVERY_DAYS = 7;
   const BACKUP_EVERY_CHANGES = 15;
   const FEEDBACK_AFTER = 3;
   const PHONE_PREFIX = "225";
   const APP_NAME = "DEKROU PRESSING";
 
-  // Nombre de dépôts gratuits avant de demander une licence PRO
   const FREE_DEPOSITS = 30;
 
-  // Clé PUBLIQUE de vérification des licences (ECDSA P-256).
-  // Elle ne permet PAS de fabriquer des clés : seule la clé privée,
-  // gardée hors-ligne dans le générateur, le peut.
+  // Clé publique ECDSA P-256 (vérification des licences uniquement)
   const LICENCE_PUBLIC_KEY = {"kty":"EC","crv":"P-256","x":"OAeK5MPyvWiCSujyWAJojirhR4C8Fa1P8ElWBFv3D-k","y":"KHtUZZTWA3MwFx1k3xM1Dz_kZFAfFkJKqQSFgWabmSQ"};
   const LICENCE_PREFIX = "DEKROU-PRO|";
 
@@ -78,16 +73,15 @@
   let settings = {};
   let isPro = false;
 
-  // ---------- Utilitaires ----------
+  // Utilitaires
   const escapeHtml = (s) => String(s).replace(/[&<>"']/g, (c) => (
     { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]
   ));
 
-  // Date locale au format AAAA-MM-JJ (évite le décalage UTC de toISOString)
   const toISODate = (d) =>
     `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 
-  // "2026-11-24" -> "24/11/2026" sans passer par new Date() (qui interprète en UTC)
+  // AAAA-MM-JJ -> JJ/MM/AAAA
   const fmtDate = (iso) => {
     if (!iso || !/^\d{4}-\d{2}-\d{2}$/.test(iso)) return "—";
     const [y, m, d] = iso.split("-");
@@ -97,7 +91,7 @@
   const amount = (input) => Math.max(0, Math.round(parseFloat(input.value) || 0));
   const digitsOnly = (s) => String(s).replace(/\D/g, "");
 
-  // Numéros ivoiriens : 10 chiffres. Accepte aussi une saisie avec 225 / +225 / 00225.
+  // Numéros ivoiriens à 10 chiffres (+225 / 00225 acceptés)
   function normalizePhone(raw) {
     let d = digitsOnly(raw);
     if (d.startsWith("00" + PHONE_PREFIX)) d = d.slice(5);
@@ -120,7 +114,7 @@
     }, 3500);
   }
 
-  // ---------- Stockage ----------
+  // Stockage
   function persist() {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(deposits));
@@ -142,7 +136,7 @@
     }
   }
 
-  // ---------- Réglages du pressing ----------
+  // Réglages du pressing
   function loadSettings() {
     try {
       const v = JSON.parse(localStorage.getItem(SETTINGS_KEY) || "{}");
@@ -175,7 +169,7 @@
     showToast("Réglages enregistrés.", "✅");
   }
 
-  // ---------- Licence PRO ----------
+  // Licence PRO
   function getDeviceId() {
     let id = localStorage.getItem(DEVICE_KEY);
     if (!/^DKX-[A-Z0-9]{4}-[A-Z0-9]{4}$/.test(id || "")) {
@@ -260,7 +254,7 @@
     refreshLicenceUI();
   }
 
-  // ---------- Sauvegarde / restauration ----------
+  // Sauvegarde / restauration
   function buildBackup() {
     return {
       app: "dekrou-pressing",
@@ -281,14 +275,12 @@
     refreshBackupBanner();
   }
 
-  // Sauvegarde en un geste : sur téléphone, ouvre le menu de partage
-  // (WhatsApp « Moi », Google Drive, Gmail…) ; sinon télécharge le fichier.
+  // Partage natif sur mobile, téléchargement sinon
   async function exportData() {
     const json = JSON.stringify(buildBackup(), null, 2);
     const base = `sauvegarde-${(settings.name || "pressing").replace(/[^\p{L}\p{N}]+/gu, "-").toLowerCase()}-${toISODate(new Date())}`;
 
     if (navigator.canShare) {
-      // Certains téléphones refusent le type JSON : on essaie aussi en .txt
       const candidates = [
         new File([json], base + ".json", { type: "application/json" }),
         new File([json], base + ".txt", { type: "text/plain" }),
@@ -367,7 +359,6 @@
         settings = { name: String(st.name || ""), phone: String(st.phone || ""), address: String(st.address || "") };
         localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
       }
-      // L'ID appareil et la licence suivent la sauvegarde (changement de téléphone)
       if (/^DKX-[A-Z0-9]{4}-[A-Z0-9]{4}$/.test(data.deviceId || "")) localStorage.setItem(DEVICE_KEY, data.deviceId);
       if (data.licence) localStorage.setItem(LICENCE_KEY, String(data.licence));
       if (/^\d+$/.test(data.ticketCounter || "")) localStorage.setItem(COUNTER_KEY, data.ticketCounter);
@@ -386,11 +377,10 @@
     el.importFile.value = "";
   }
 
-  // ---------- Ticket séquentiel (plus de collisions aléatoires) ----------
+  // Ticket séquentiel
   function peekNextTicket() {
     let n = parseInt(localStorage.getItem(COUNTER_KEY), 10);
     if (!Number.isFinite(n)) {
-      // Reprend après le plus grand numéro existant
       n = deposits.reduce((max, d) => {
         const v = parseInt(String(d.ticket || "").replace(/\D/g, ""), 10);
         return Number.isFinite(v) && v > max ? v : max;
@@ -408,7 +398,7 @@
     localStorage.setItem(COUNTER_KEY, currentTicket.replace(/\D/g, ""));
   }
 
-  // ---------- Formulaire ----------
+  // Formulaire
   function setDefaultPickupDate() {
     const d = new Date();
     d.setDate(d.getDate() + 2);
@@ -490,20 +480,18 @@
     localStorage.setItem(CREATED_KEY, String(createdCount() + 1));
     refreshLicenceUI();
 
-    // Ouvert de façon synchrone dans le geste utilisateur (évite le blocage des pop-ups)
     sendWhatsAppReceipt(deposit);
     renderDeposits();
     resetForm();
     showToast("Dépôt enregistré avec succès !", "✅");
 
-    // Demande d'avis APRÈS l'enregistrement (avant, le dépôt était perdu)
     if (deposits.length >= FEEDBACK_AFTER && !localStorage.getItem(FEEDBACK_KEY)) {
       localStorage.setItem(FEEDBACK_KEY, "true");
       setTimeout(() => openModal(el.modal), 800);
     }
   }
 
-  // ---------- WhatsApp ----------
+  // WhatsApp
   function sendWhatsAppReceipt(dep) {
     const msg =
       `🧺 *REÇU DE DÉPÔT — ${(settings.name || APP_NAME).toUpperCase()}*\n` +
@@ -526,7 +514,6 @@
     window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`, "_blank", "noopener");
   }
 
-  // Prévient le client que son linge est prêt (et rappelle le reste à payer)
   function sendReadyMessage(id) {
     const dep = findDeposit(id);
     if (!dep) return;
@@ -556,7 +543,7 @@
     showToast(first ? "Client prévenu : linge prêt." : "Rappel envoyé.", "🔔");
   }
 
-  // ---------- Liste ----------
+  // Liste
   function depositCard(dep, today) {
     const paid = dep.balance === 0;
     const late = dep.pickupDate && dep.pickupDate < today;
@@ -610,7 +597,6 @@
     el.statBalance.textContent = fmtMoney(deposits.reduce((s, d) => s + (d.balance || 0), 0));
     el.statLate.textContent = deposits.filter((d) => d.pickupDate && d.pickupDate < today).length;
 
-    // Une seule écriture DOM (l'ancien `innerHTML +=` en boucle était en O(n²))
     el.list.innerHTML = visible.length
       ? visible.map((d) => depositCard(d, today)).join("")
       : `<div class="text-center py-8 text-slate-500 text-xs">${n ? "Aucun résultat." : "Aucun dépôt enregistré."}</div>`;
@@ -639,7 +625,7 @@
     showToast("Fiche supprimée.", "🗑️");
   }
 
-  // ---------- Modale retours ----------
+  // Modale retours
   function openModal(m) {
     closeModals();
     m.classList.remove("hidden");
@@ -654,7 +640,7 @@
     closeModals();
   }
 
-  // ---------- PWA ----------
+  // PWA
   window.addEventListener("beforeinstallprompt", (e) => {
     e.preventDefault();
     deferredPrompt = e;
@@ -672,13 +658,12 @@
   }
 
   function registerServiceWorker() {
-    // Un service worker doit être un vrai fichier servi en HTTPS (les URL blob: sont refusées)
     if ("serviceWorker" in navigator && location.protocol.startsWith("http")) {
       navigator.serviceWorker.register("sw.js").catch(() => {});
     }
   }
 
-  // ---------- Événements (délégation, plus de onclick inline) ----------
+  // Événements
   const actions = {
     "install": installPWA,
     "open-feedback": () => openModal(el.modal),
@@ -713,7 +698,6 @@
   el.advance.addEventListener("input", calculateBalance);
   el.search.addEventListener("input", renderDeposits);
 
-  // Synchronise plusieurs onglets ouverts
   window.addEventListener("storage", (e) => {
     if (e.key === STORAGE_KEY) { loadDeposits(); renderDeposits(); }
     if (e.key === COUNTER_KEY) refreshTicket();
@@ -721,15 +705,13 @@
     if (e.key === LICENCE_KEY || e.key === CREATED_KEY) checkLicence();
   });
 
-  // ---------- Démarrage ----------
+  // Démarrage
   loadSettings();
   loadDeposits();
-  // Les dépôts existants comptent dans la période d'essai
   if (localStorage.getItem(CREATED_KEY) === null) localStorage.setItem(CREATED_KEY, String(deposits.length));
   renderDeposits();
   checkLicence();
   refreshBackupBanner();
-  // Demande au navigateur de ne pas effacer les données en cas de manque de place
   if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
   if (!settings.name) setTimeout(openSettings, 400);
   refreshTicket();

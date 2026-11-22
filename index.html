@@ -4,7 +4,6 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>DEKROU PRESSING — Gestion & Reçus WhatsApp</title>
-  <!-- Sécurité : seuls les fichiers de ce site peuvent s'exécuter (aucun script externe ni injecté) -->
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; manifest-src 'self'; worker-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
   <meta name="referrer" content="no-referrer">
   <meta name="description" content="Gestion des dépôts de pressing et envoi de reçus WhatsApp.">
@@ -19,24 +18,23 @@
   <link rel="icon" href="icon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="icon.svg">
 
-  <!-- CSS Tailwind précompilé (voir README) : plus de CDN, fonctionne hors-ligne -->
   <link rel="stylesheet" href="styles.css">
 </head>
 <body class="bg-slate-950 text-slate-100 min-h-screen font-sans antialiased pb-20">
 
-  <!-- Bannière d'Installation PWA -->
+  <!-- Installation -->
   <div id="pwaBanner" class="hidden bg-sky-600 text-white px-4 py-2.5 flex justify-between items-center text-xs font-semibold shadow-md sticky top-0 z-40">
     <span class="flex items-center gap-2">📱 Installer l'application sur l'écran d'accueil</span>
     <button type="button" data-action="install" class="bg-white text-sky-700 px-3 py-1 rounded-lg font-bold text-[11px] shadow hover:bg-slate-100 transition">Installer</button>
   </div>
 
-  <!-- Notification Toast -->
+  <!-- Toast -->
   <div id="toastNotification" role="status" aria-live="polite" class="fixed bottom-5 left-1/2 -translate-x-1/2 z-50 bg-slate-900 border border-slate-700 text-white px-4 py-2.5 rounded-xl shadow-2xl text-xs font-semibold flex items-center gap-2 transition-all duration-300 opacity-0 pointer-events-none translate-y-4">
     <span id="toastIcon">✨</span>
     <span id="toastMessage"></span>
   </div>
 
-  <!-- Header App -->
+  <!-- En-tête -->
   <header class="bg-slate-900/90 border-b border-slate-800 sticky top-0 z-30 backdrop-blur">
     <div class="max-w-xl mx-auto px-4 py-3 flex items-center justify-between">
       <div class="flex items-center gap-3">
@@ -69,7 +67,7 @@
       <span id="trialText">Version d'essai</span> — <span class="underline">Passer en PRO</span>
     </button>
 
-    <!-- Formulaire d'Enregistrement de Dépôt -->
+    <!-- Nouveau dépôt -->
     <form id="depositForm" novalidate class="bg-slate-900 border border-slate-800 rounded-2xl p-4 space-y-4 shadow-xl">
       <div class="flex justify-between items-center border-b border-slate-800 pb-2">
         <h2 class="font-bold text-sm text-white">✨ Nouveau Dépôt Client</h2>
@@ -130,7 +128,7 @@
       </button>
     </form>
 
-    <!-- Liste des Dépôts En Cours -->
+    <!-- Dépôts en cours -->
     <section class="space-y-3">
       <div class="flex justify-between items-center px-1">
         <h3 class="font-bold text-sm text-white">📋 Dépôts en Cours</h3>
@@ -158,7 +156,7 @@
   </main>
 
 
-  <!-- MODALE RÉGLAGES -->
+  <!-- Réglages -->
   <div id="settingsModal" role="dialog" aria-modal="true" aria-labelledby="settingsTitle" class="modal fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
     <div class="bg-slate-900 border border-slate-800 w-full max-w-sm rounded-2xl p-5 space-y-4 shadow-2xl relative max-h-[90vh] overflow-y-auto">
       <button type="button" data-action="close-modal" aria-label="Fermer" class="absolute top-3 right-3 text-slate-400 hover:text-white font-bold text-sm">✕</button>
@@ -200,7 +198,7 @@
     </div>
   </div>
 
-  <!-- MODALE LICENCE PRO -->
+  <!-- Licence -->
   <div id="licenceModal" role="dialog" aria-modal="true" aria-labelledby="licenceTitle" class="modal fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
     <div class="bg-slate-900 border border-slate-800 w-full max-w-sm rounded-2xl p-5 space-y-4 shadow-2xl relative">
       <button type="button" data-action="close-modal" aria-label="Fermer" class="absolute top-3 right-3 text-slate-400 hover:text-white font-bold text-sm">✕</button>
@@ -227,7 +225,7 @@
     </div>
   </div>
 
-  <!-- MODALE RETOURS -->
+  <!-- Avis -->
   <div id="feedbackModal" role="dialog" aria-modal="true" aria-labelledby="feedbackTitle" class="modal fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
     <div class="bg-slate-900 border border-slate-800 w-full max-w-sm rounded-2xl p-5 space-y-4 shadow-2xl relative">
       <button type="button" data-action="close-modal" aria-label="Fermer" class="absolute top-3 right-3 text-slate-400 hover:text-white font-bold text-sm">✕</button>
