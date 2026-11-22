@@ -4,6 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>DEKROU PRESSING — Gestion & Reçus WhatsApp</title>
+  <!-- Sécurité : seuls les fichiers de ce site peuvent s'exécuter (aucun script externe ni injecté) -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; manifest-src 'self'; worker-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
+  <meta name="referrer" content="no-referrer">
   <meta name="description" content="Gestion des dépôts de pressing et envoi de reçus WhatsApp.">
 
   <meta name="theme-color" content="#0284c7">
@@ -42,17 +45,23 @@
           <h1 class="font-black text-base text-white tracking-tight flex items-center gap-2">
             DEKROU <span class="text-sky-400">PRESSING</span>
           </h1>
-          <p class="text-[11px] text-slate-400">Gestion des dépôts & Reçus WhatsApp</p>
+          <p id="headerPressingName" class="text-[11px] text-slate-400 truncate max-w-[11rem]">Gestion des dépôts & Reçus WhatsApp</p>
         </div>
       </div>
 
-      <button type="button" data-action="open-feedback" class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs px-3 py-1.5 rounded-xl font-bold text-sky-400 transition flex items-center gap-1">
-        💡 Vos retours
-      </button>
+      <div class="flex items-center gap-2">
+        <button type="button" data-action="open-feedback" class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs px-3 py-1.5 rounded-xl font-bold text-sky-400 transition">💡 Avis</button>
+        <button type="button" data-action="open-settings" aria-label="Réglages" class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-sm px-2.5 py-1 rounded-xl transition">⚙️</button>
+      </div>
     </div>
   </header>
 
   <main class="max-w-xl mx-auto px-4 pt-4 space-y-5">
+
+    <!-- Bandeau version d'essai -->
+    <button type="button" id="trialBanner" data-action="open-licence" class="hidden w-full text-left bg-amber-500/10 border border-amber-500/30 text-amber-300 rounded-xl px-3 py-2 text-xs font-semibold">
+      <span id="trialText">Version d'essai</span> — <span class="underline">Passer en PRO</span>
+    </button>
 
     <!-- Formulaire d'Enregistrement de Dépôt -->
     <form id="depositForm" novalidate class="bg-slate-900 border border-slate-800 rounded-2xl p-4 space-y-4 shadow-xl">
@@ -142,10 +151,80 @@
 
   </main>
 
-  <!-- MODALE RETOURS -->
-  <div id="feedbackModal" role="dialog" aria-modal="true" aria-labelledby="feedbackTitle" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+
+  <!-- MODALE RÉGLAGES -->
+  <div id="settingsModal" role="dialog" aria-modal="true" aria-labelledby="settingsTitle" class="modal fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-slate-900 border border-slate-800 w-full max-w-sm rounded-2xl p-5 space-y-4 shadow-2xl relative max-h-[90vh] overflow-y-auto">
+      <button type="button" data-action="close-modal" aria-label="Fermer" class="absolute top-3 right-3 text-slate-400 hover:text-white font-bold text-sm">✕</button>
+      <h3 id="settingsTitle" class="font-black text-base text-white">⚙️ Mon pressing</h3>
+      <p class="text-[11px] text-slate-400">Ces informations apparaissent sur les reçus WhatsApp envoyés à vos clients.</p>
+
+      <form id="settingsForm" novalidate class="space-y-3">
+        <div>
+          <label for="setName" class="block text-xs font-semibold text-slate-300 mb-1">Nom du pressing *</label>
+          <input type="text" id="setName" maxlength="60" placeholder="Ex: Pressing Le Lys"
+            class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-sky-500">
+        </div>
+        <div>
+          <label for="setPhone" class="block text-xs font-semibold text-slate-300 mb-1">Téléphone du pressing</label>
+          <input type="tel" id="setPhone" maxlength="20" inputmode="tel" placeholder="Ex: 07 00 00 00 00"
+            class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-sky-500">
+        </div>
+        <div>
+          <label for="setAddress" class="block text-xs font-semibold text-slate-300 mb-1">Adresse / Quartier</label>
+          <input type="text" id="setAddress" maxlength="100" placeholder="Ex: Cocody Angré, 8e tranche"
+            class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-sky-500">
+        </div>
+        <button type="submit" class="w-full bg-sky-600 hover:bg-sky-500 text-white font-bold py-2.5 rounded-xl text-sm transition">Enregistrer</button>
+      </form>
+
+      <div class="border-t border-slate-800 pt-3 space-y-2">
+        <h4 class="text-xs font-bold text-white">💾 Sauvegarde des données</h4>
+        <p class="text-[11px] text-slate-400">Les fiches restent uniquement sur ce téléphone. Faites une sauvegarde régulièrement (ou avant de changer de téléphone).</p>
+        <div class="grid grid-cols-2 gap-2">
+          <button type="button" data-action="export" class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 text-xs py-2 rounded-lg font-semibold">⬇️ Sauvegarder</button>
+          <button type="button" data-action="import" class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 text-xs py-2 rounded-lg font-semibold">⬆️ Restaurer</button>
+        </div>
+        <input type="file" id="importFile" accept="application/json,.json" class="hidden">
+      </div>
+
+      <div class="border-t border-slate-800 pt-3">
+        <button type="button" data-action="open-licence" class="w-full bg-slate-800 hover:bg-slate-700 border border-slate-700 text-amber-300 text-xs py-2 rounded-lg font-semibold">🔑 Licence : <span id="settingsLicenceStatus">Essai</span></button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODALE LICENCE PRO -->
+  <div id="licenceModal" role="dialog" aria-modal="true" aria-labelledby="licenceTitle" class="modal fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
     <div class="bg-slate-900 border border-slate-800 w-full max-w-sm rounded-2xl p-5 space-y-4 shadow-2xl relative">
-      <button type="button" data-action="close-feedback" aria-label="Fermer" class="absolute top-3 right-3 text-slate-400 hover:text-white font-bold text-sm">✕</button>
+      <button type="button" data-action="close-modal" aria-label="Fermer" class="absolute top-3 right-3 text-slate-400 hover:text-white font-bold text-sm">✕</button>
+      <div class="text-center space-y-1">
+        <div class="w-12 h-12 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-2xl flex items-center justify-center mx-auto mb-1" aria-hidden="true">🔑</div>
+        <h3 id="licenceTitle" class="font-black text-base text-white">Licence PRO</h3>
+        <p id="licenceStatus" class="text-xs text-slate-400"></p>
+      </div>
+
+      <div class="bg-slate-950 border border-slate-800 rounded-xl p-3 text-center">
+        <span class="block text-[10px] uppercase font-bold text-slate-500 tracking-wider">ID de cet appareil</span>
+        <span id="deviceIdDisplay" class="font-mono font-black text-sky-400 text-lg select-all">DKX-----</span>
+      </div>
+
+      <div id="licenceForm" class="space-y-3">
+        <button type="button" data-action="request-licence" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2.5 rounded-xl text-xs transition">💬 Demander ma clé PRO sur WhatsApp</button>
+        <div>
+          <label for="licenceKeyInput" class="block text-xs font-semibold text-slate-300 mb-1">Clé PRO reçue</label>
+          <textarea id="licenceKeyInput" rows="3" placeholder="Collez ici la clé PRO-…" autocomplete="off" spellcheck="false"
+            class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-[11px] font-mono text-white focus:outline-none focus:border-sky-500 break-all"></textarea>
+        </div>
+        <button type="button" data-action="activate-licence" class="w-full bg-sky-600 hover:bg-sky-500 text-white font-bold py-2.5 rounded-xl text-xs transition">✅ Activer</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODALE RETOURS -->
+  <div id="feedbackModal" role="dialog" aria-modal="true" aria-labelledby="feedbackTitle" class="modal fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-slate-900 border border-slate-800 w-full max-w-sm rounded-2xl p-5 space-y-4 shadow-2xl relative">
+      <button type="button" data-action="close-modal" aria-label="Fermer" class="absolute top-3 right-3 text-slate-400 hover:text-white font-bold text-sm">✕</button>
 
       <div class="text-center space-y-1">
         <div class="w-12 h-12 rounded-2xl bg-sky-500/10 border border-sky-500/20 text-sky-400 text-2xl flex items-center justify-center mx-auto mb-1" aria-hidden="true">💬</div>
@@ -154,7 +233,7 @@
       </div>
 
       <div class="bg-slate-950 p-3.5 rounded-xl border border-slate-800 space-y-2 text-xs text-slate-300">
-        <p>Vous avez testé la création de plusieurs dépôts sur <strong>DEKROU PRESSING</strong>.</p>
+        <p>Merci d'utiliser <strong>DEKROU PRESSING</strong> !</p>
         <p class="text-slate-400 text-[11px]">Quelles fonctionnalités aimeriez-vous voir ajouter ? L'application est-elle pratique pour votre quotidien ?</p>
       </div>
 
@@ -163,394 +242,12 @@
         💬 Donner mes impressions sur WhatsApp
       </button>
 
-      <button type="button" data-action="close-feedback" class="w-full bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs py-2 rounded-xl font-semibold transition">
+      <button type="button" data-action="close-modal" class="w-full bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs py-2 rounded-xl font-semibold transition">
         Continuer l'utilisation
       </button>
     </div>
   </div>
 
-  <script>
-  (() => {
-    "use strict";
-
-    // Clés de stockage conservées pour rester compatible avec les données existantes
-    const STORAGE_KEY = "vdi_pressing_deposits";
-    const FEEDBACK_KEY = "vdi_pressing_feedback_prompted";
-    const COUNTER_KEY = "vdi_pressing_ticket_counter";
-    const FEEDBACK_AFTER = 3;
-    const PHONE_PREFIX = "225";
-
-    const $ = (id) => document.getElementById(id);
-    const el = {
-      form: $("depositForm"),
-      name: $("clientName"),
-      phone: $("clientPhone"),
-      items: $("itemsDescription"),
-      total: $("totalAmount"),
-      advance: $("advanceAmount"),
-      pickup: $("pickupDate"),
-      balance: $("balanceDisplay"),
-      ticket: $("ticketNumberDisplay"),
-      list: $("depositsContainer"),
-      count: $("depositCount"),
-      search: $("searchInput"),
-      stats: $("statsBar"),
-      statBalance: $("statBalance"),
-      statLate: $("statLate"),
-      modal: $("feedbackModal"),
-      banner: $("pwaBanner"),
-      toast: $("toastNotification"),
-      toastIcon: $("toastIcon"),
-      toastMsg: $("toastMessage"),
-    };
-
-    const fcfa = new Intl.NumberFormat("fr-FR", { maximumFractionDigits: 0 });
-    const fmtMoney = (n) => fcfa.format(n) + " FCFA";
-
-    let deposits = [];
-    let currentTicket = "";
-    let deferredPrompt = null;
-    let toastTimer = null;
-
-    // ---------- Utilitaires ----------
-    const escapeHtml = (s) => String(s).replace(/[&<>"']/g, (c) => (
-      { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]
-    ));
-
-    // Date locale au format AAAA-MM-JJ (évite le décalage UTC de toISOString)
-    const toISODate = (d) =>
-      `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-
-    // "2026-11-24" -> "24/11/2026" sans passer par new Date() (qui interprète en UTC)
-    const fmtDate = (iso) => {
-      if (!iso || !/^\d{4}-\d{2}-\d{2}$/.test(iso)) return "—";
-      const [y, m, d] = iso.split("-");
-      return `${d}/${m}/${y}`;
-    };
-
-    const amount = (input) => Math.max(0, Math.round(parseFloat(input.value) || 0));
-    const digitsOnly = (s) => String(s).replace(/\D/g, "");
-
-    // Numéros ivoiriens : 10 chiffres. Accepte aussi une saisie avec 225 / +225 / 00225.
-    function normalizePhone(raw) {
-      let d = digitsOnly(raw);
-      if (d.startsWith("00" + PHONE_PREFIX)) d = d.slice(5);
-      else if (d.length > 10 && d.startsWith(PHONE_PREFIX)) d = d.slice(3);
-      return d.length === 10 ? PHONE_PREFIX + d : null;
-    }
-
-    const prettyPhone = (full) => {
-      const local = String(full || "").replace(new RegExp("^" + PHONE_PREFIX), "");
-      return local ? "+225 " + local.replace(/(\d{2})(?=\d)/g, "$1 ") : "";
-    };
-
-    function showToast(message, icon = "✨") {
-      el.toastMsg.textContent = message;
-      el.toastIcon.textContent = icon;
-      el.toast.classList.remove("opacity-0", "pointer-events-none", "translate-y-4");
-      clearTimeout(toastTimer);
-      toastTimer = setTimeout(() => {
-        el.toast.classList.add("opacity-0", "pointer-events-none", "translate-y-4");
-      }, 3500);
-    }
-
-    // ---------- Stockage ----------
-    function persist() {
-      try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(deposits));
-        return true;
-      } catch (e) {
-        showToast("Stockage plein ou indisponible : données non sauvegardées.", "⚠️");
-        return false;
-      }
-    }
-
-    function loadDeposits() {
-      try {
-        const parsed = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
-        deposits = Array.isArray(parsed) ? parsed : [];
-      } catch (e) {
-        deposits = [];
-      }
-    }
-
-    // ---------- Ticket séquentiel (plus de collisions aléatoires) ----------
-    function peekNextTicket() {
-      let n = parseInt(localStorage.getItem(COUNTER_KEY), 10);
-      if (!Number.isFinite(n)) {
-        // Reprend après le plus grand numéro existant
-        n = deposits.reduce((max, d) => {
-          const v = parseInt(String(d.ticket || "").replace(/\D/g, ""), 10);
-          return Number.isFinite(v) && v > max ? v : max;
-        }, 1000);
-      }
-      return n + 1;
-    }
-
-    function refreshTicket() {
-      currentTicket = `TICK-${peekNextTicket()}`;
-      el.ticket.textContent = currentTicket;
-    }
-
-    function commitTicket() {
-      localStorage.setItem(COUNTER_KEY, currentTicket.replace(/\D/g, ""));
-    }
-
-    // ---------- Formulaire ----------
-    function setDefaultPickupDate() {
-      const d = new Date();
-      d.setDate(d.getDate() + 2);
-      el.pickup.value = toISODate(d);
-      el.pickup.min = toISODate(new Date());
-    }
-
-    function calculateBalance() {
-      const total = amount(el.total);
-      const advance = amount(el.advance);
-      el.balance.textContent = fmtMoney(Math.max(0, total - advance));
-      el.advance.classList.toggle("border-rose-500", advance > total && total > 0);
-    }
-
-    function resetForm() {
-      el.form.reset();
-      el.balance.textContent = fmtMoney(0);
-      el.advance.classList.remove("border-rose-500");
-      setDefaultPickupDate();
-      refreshTicket();
-      el.name.focus();
-    }
-
-    function handleSubmit(e) {
-      e.preventDefault();
-
-      const name = el.name.value.trim();
-      const items = el.items.value.trim();
-      const total = amount(el.total);
-      const advance = amount(el.advance);
-      const pickupDate = el.pickup.value;
-      const phone = normalizePhone(el.phone.value);
-
-      if (!name || !items || total <= 0) {
-        showToast("Veuillez remplir le nom, les articles et le montant.", "⚠️");
-        (!name ? el.name : !items ? el.items : el.total).focus();
-        return;
-      }
-      if (!phone) {
-        showToast("Numéro WhatsApp invalide (10 chiffres attendus).", "⚠️");
-        el.phone.focus();
-        return;
-      }
-      if (advance > total) {
-        showToast("L'avance ne peut pas dépasser le montant total.", "⚠️");
-        el.advance.focus();
-        return;
-      }
-
-      const deposit = {
-        id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
-        ticket: currentTicket,
-        name,
-        phone,
-        items,
-        total,
-        advance,
-        balance: total - advance,
-        pickupDate,
-        createdAt: new Date().toLocaleDateString("fr-FR"),
-      };
-
-      deposits.unshift(deposit);
-      if (!persist()) {
-        deposits.shift();
-        return;
-      }
-      commitTicket();
-
-      // Ouvert de façon synchrone dans le geste utilisateur (évite le blocage des pop-ups)
-      sendWhatsAppReceipt(deposit);
-      renderDeposits();
-      resetForm();
-      showToast("Dépôt enregistré avec succès !", "✅");
-
-      // Demande d'avis APRÈS l'enregistrement (avant, le dépôt était perdu)
-      if (deposits.length >= FEEDBACK_AFTER && !localStorage.getItem(FEEDBACK_KEY)) {
-        localStorage.setItem(FEEDBACK_KEY, "true");
-        setTimeout(openFeedbackModal, 800);
-      }
-    }
-
-    // ---------- WhatsApp ----------
-    function sendWhatsAppReceipt(dep) {
-      const msg =
-        `🧺 *REÇU DE DÉPÔT — DEKROU PRESSING*\n` +
-        `-----------------------------------\n` +
-        `🎫 *Ticket N° :* ${dep.ticket}\n` +
-        `👤 *Client :* ${dep.name}\n` +
-        `📦 *Articles :* ${dep.items}\n\n` +
-        `💰 *Montant Total :* ${fmtMoney(dep.total)}\n` +
-        `💵 *Avance Payée :* ${fmtMoney(dep.advance)}\n` +
-        `🔴 *Reste à Payer :* *${fmtMoney(dep.balance)}*\n\n` +
-        `📅 *Date de Retrait Prévue :* *${fmtDate(dep.pickupDate)}*\n` +
-        `-----------------------------------\n` +
-        `Merci pour votre confiance ! Merci de présenter ce message lors du retrait.\n` +
-        `_Conformément à la loi n° 2013-450, vos coordonnées sont uniquement conservées pour la gestion de votre reçu._`;
-
-      const phone = digitsOnly(dep.phone);
-      window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`, "_blank", "noopener");
-    }
-
-    // ---------- Liste ----------
-    function depositCard(dep, today) {
-      const paid = dep.balance === 0;
-      const late = dep.pickupDate && dep.pickupDate < today;
-      const id = escapeHtml(dep.id);
-      return `
-        <article class="bg-slate-900 border ${late ? "border-rose-500/40" : "border-slate-800"} rounded-2xl p-4 space-y-3 shadow-lg">
-          <div class="flex justify-between items-start gap-2 border-b border-slate-800 pb-2">
-            <div class="min-w-0">
-              <span class="font-mono font-bold text-sky-400 text-xs">${escapeHtml(dep.ticket)}</span>
-              <h4 class="font-bold text-sm text-white break-words">${escapeHtml(dep.name)}</h4>
-              ${dep.phone ? `<span class="font-mono text-[11px] text-slate-500">${escapeHtml(prettyPhone(dep.phone))}</span>` : ""}
-            </div>
-            <span class="shrink-0 text-[10px] font-bold px-2 py-0.5 rounded-full border ${paid
-              ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/30"
-              : "bg-amber-500/10 text-amber-400 border-amber-500/30"}">
-              ${paid ? "SOLDÉ" : "RESTE : " + fmtMoney(dep.balance)}
-            </span>
-          </div>
-
-          <p class="text-xs text-slate-300 bg-slate-950 p-2 rounded-xl border border-slate-800/80 whitespace-pre-line break-words">${escapeHtml(dep.items)}</p>
-
-          <div class="flex justify-between items-center gap-2 text-[11px] text-slate-400 pt-1">
-            <span>Retrait : <strong class="${late ? "text-rose-400" : "text-slate-200"}">${fmtDate(dep.pickupDate)}${late ? " ⏰" : ""}</strong></span>
-            <div class="flex gap-2">
-              ${paid ? "" : `<button type="button" data-action="settle" data-id="${id}" class="bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 px-2.5 py-1 rounded-lg text-[10px] font-bold">💵 Solder</button>`}
-              <button type="button" data-action="resend" data-id="${id}" class="bg-slate-800 hover:bg-slate-700 text-sky-400 border border-slate-700 px-2.5 py-1 rounded-lg text-[10px] font-bold">💬 Reçu</button>
-              <button type="button" data-action="delete" data-id="${id}" aria-label="Supprimer la fiche" class="bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30 px-2.5 py-1 rounded-lg text-[10px] font-bold">🗑️</button>
-            </div>
-          </div>
-        </article>`;
-    }
-
-    function renderDeposits() {
-      const today = toISODate(new Date());
-      const q = el.search.value.trim().toLowerCase();
-      const qDigits = digitsOnly(q);
-
-      const visible = !q ? deposits : deposits.filter((d) =>
-        `${d.ticket} ${d.name} ${d.items}`.toLowerCase().includes(q) ||
-        (qDigits.length >= 2 && String(d.phone || "").includes(qDigits))
-      );
-
-      const n = deposits.length;
-      el.count.textContent = `${n} fiche${n > 1 ? "s" : ""}`;
-      el.search.classList.toggle("hidden", n < 4);
-      el.stats.classList.toggle("hidden", n === 0);
-      el.statBalance.textContent = fmtMoney(deposits.reduce((s, d) => s + (d.balance || 0), 0));
-      el.statLate.textContent = deposits.filter((d) => d.pickupDate && d.pickupDate < today).length;
-
-      // Une seule écriture DOM (l'ancien `innerHTML +=` en boucle était en O(n²))
-      el.list.innerHTML = visible.length
-        ? visible.map((d) => depositCard(d, today)).join("")
-        : `<div class="text-center py-8 text-slate-500 text-xs">${n ? "Aucun résultat." : "Aucun dépôt enregistré."}</div>`;
-    }
-
-    function findDeposit(id) {
-      return deposits.find((d) => d.id === id);
-    }
-
-    function settleDeposit(id) {
-      const dep = findDeposit(id);
-      if (!dep || !confirm(`Confirmer l'encaissement de ${fmtMoney(dep.balance)} pour ${dep.name} ?`)) return;
-      dep.advance = dep.total;
-      dep.balance = 0;
-      persist();
-      renderDeposits();
-      showToast("Paiement soldé.", "💵");
-    }
-
-    function deleteDeposit(id) {
-      const dep = findDeposit(id);
-      if (!dep || !confirm(`Supprimer la fiche ${dep.ticket} (${dep.name}) ?`)) return;
-      deposits = deposits.filter((d) => d.id !== id);
-      persist();
-      renderDeposits();
-      showToast("Fiche supprimée.", "🗑️");
-    }
-
-    // ---------- Modale retours ----------
-    function openFeedbackModal() { el.modal.classList.remove("hidden"); }
-    function closeFeedbackModal() { el.modal.classList.add("hidden"); }
-
-    function sendFeedbackWhatsApp() {
-      const msg = `👋 Bonjour,\n\nVoici mes impressions et suggestions pour l'amélioration de l'application *DEKROU PRESSING* :\n\n- `;
-      window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, "_blank", "noopener");
-      closeFeedbackModal();
-    }
-
-    // ---------- PWA ----------
-    window.addEventListener("beforeinstallprompt", (e) => {
-      e.preventDefault();
-      deferredPrompt = e;
-      el.banner.classList.remove("hidden");
-    });
-
-    window.addEventListener("appinstalled", () => el.banner.classList.add("hidden"));
-
-    async function installPWA() {
-      if (!deferredPrompt) return;
-      deferredPrompt.prompt();
-      await deferredPrompt.userChoice;
-      deferredPrompt = null;
-      el.banner.classList.add("hidden");
-    }
-
-    function registerServiceWorker() {
-      // Un service worker doit être un vrai fichier servi en HTTPS (les URL blob: sont refusées)
-      if ("serviceWorker" in navigator && location.protocol.startsWith("http")) {
-        navigator.serviceWorker.register("sw.js").catch(() => {});
-      }
-    }
-
-    // ---------- Événements (délégation, plus de onclick inline) ----------
-    const actions = {
-      "install": installPWA,
-      "open-feedback": openFeedbackModal,
-      "close-feedback": closeFeedbackModal,
-      "send-feedback": sendFeedbackWhatsApp,
-      "resend": (id) => { const d = findDeposit(id); if (d) sendWhatsAppReceipt(d); },
-      "settle": settleDeposit,
-      "delete": deleteDeposit,
-    };
-
-    document.addEventListener("click", (e) => {
-      const btn = e.target.closest("[data-action]");
-      if (btn && actions[btn.dataset.action]) actions[btn.dataset.action](btn.dataset.id);
-      else if (e.target === el.modal) closeFeedbackModal();
-    });
-
-    document.addEventListener("keydown", (e) => {
-      if (e.key === "Escape" && !el.modal.classList.contains("hidden")) closeFeedbackModal();
-    });
-
-    el.form.addEventListener("submit", handleSubmit);
-    el.total.addEventListener("input", calculateBalance);
-    el.advance.addEventListener("input", calculateBalance);
-    el.search.addEventListener("input", renderDeposits);
-
-    // Synchronise plusieurs onglets ouverts
-    window.addEventListener("storage", (e) => {
-      if (e.key === STORAGE_KEY) { loadDeposits(); renderDeposits(); }
-      if (e.key === COUNTER_KEY) refreshTicket();
-    });
-
-    // ---------- Démarrage ----------
-    loadDeposits();
-    renderDeposits();
-    refreshTicket();
-    setDefaultPickupDate();
-    registerServiceWorker();
-  })();
-  </script>
+  <script src="app.js" defer></script>
 </body>
 </html>

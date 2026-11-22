@@ -1,0 +1,6 @@
+# Générateur de clés PRO : contient la clé privée, ne jamais publier
+*keygen*
+*generateur*
+*.pem
+*.key
+node_modules/

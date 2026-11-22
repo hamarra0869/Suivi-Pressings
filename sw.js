@@ -1,6 +1,6 @@
 // Service worker : l'application fonctionne entièrement hors-ligne.
-const CACHE = "dekrou-v1";
-const ASSETS = ["./", "index.html", "styles.css", "manifest.webmanifest", "icon.svg"];
+const CACHE = "dekrou-v2";
+const ASSETS = ["./", "index.html", "app.js", "styles.css", "manifest.webmanifest", "icon.svg"];
 
 self.addEventListener("install", (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(ASSETS)).then(() => self.skipWaiting()));
